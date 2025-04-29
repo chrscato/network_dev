@@ -1,0 +1,217 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Contract for {{ provider.name }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .radio-group {
+            margin-bottom: 20px;
+        }
+        .radio-option {
+            margin-bottom: 10px;
+        }
+        .rate-inputs {
+            margin-left: 20px;
+            display: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100px;
+            padding: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .provider-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .contact-info {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Generate Contract for {{ provider.name }}</h1>
+    
+    <div class="provider-info">
+        <h2>Provider Information</h2>
+        <p><strong>Name:</strong> {{ provider.name }}</p>
+        {% if provider.dba_name %}
+        <p><strong>DBA Name:</strong> {{ provider.dba_name }}</p>
+        {% endif %}
+        <p><strong>Address:</strong> {{ provider.address }}</p>
+        {% if provider.provider_type %}
+        <p><strong>Provider Type:</strong> {{ provider.provider_type }}</p>
+        {% endif %}
+        {% if provider.specialty %}
+        <p><strong>Specialty:</strong> {{ provider.specialty }}</p>
+        {% endif %}
+        {% if provider.npi %}
+        <p><strong>NPI:</strong> {{ provider.npi }}</p>
+        {% endif %}
+        
+        {% if has_contacts %}
+        <div class="contact-info">
+            <h3>Contact Information</h3>
+            {% for contact in contacts %}
+            <p><strong>Contact:</strong> {{ contact.name }}
+                {% if contact.title %} ({{ contact.title }}){% endif %}
+            </p>
+            {% if contact.phone %}
+            <p><strong>Phone:</strong> {{ contact.phone }}</p>
+            {% endif %}
+            {% if contact.email %}
+            <p><strong>Email:</strong> {{ contact.email }}</p>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="warning">
+            <p><strong>Warning:</strong> This provider does not have any contacts associated with it. 
+            The contract will be generated without contact information.</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <form method="post">
+        <div class="form-group">
+            <label>Select Reimbursement Method:</label>
+            <div class="radio-group">
+                <div class="radio-option">
+                    <input type="radio" id="standard" name="reimbursement_method" value="standard" checked>
+                    <label for="standard">Standard Rate per Imaging Category</label>
+                    <div id="standard-rates" class="rate-inputs">
+                        <p>Standard rates will be used based on the provider's states.</p>
+                        <table>
+                            <tr>
+                                <th>Category</th>
+                                <th>Standard Rate</th>
+                            </tr>
+                            {% for category, rate in imaging_rates.items() %}
+                            <tr>
+                                <td>{{ category }}</td>
+                                <td>${{ rate }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="radio-option">
+                    <input type="radio" id="wcfs" name="reimbursement_method" value="wcfs">
+                    <label for="wcfs">Percentage of WCFS</label>
+                    <div id="wcfs-rates" class="rate-inputs">
+                        <p>Enter WCFS percentage for each category:</p>
+                        <table>
+                            <tr>
+                                <th>Category</th>
+                                <th>WCFS Percentage</th>
+                            </tr>
+                            {% for category in imaging_categories %}
+                            <tr>
+                                <td>{{ category }}</td>
+                                <td><input type="number" name="wcfs_{{ category }}" min="0" max="100" step="0.1" placeholder="%"></td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="radio-option">
+                    <input type="radio" id="custom" name="reimbursement_method" value="custom">
+                    <label for="custom">Custom Rate per Category</label>
+                    <div id="custom-rates" class="rate-inputs">
+                        <p>Enter custom rate for each category:</p>
+                        <table>
+                            <tr>
+                                <th>Category</th>
+                                <th>Custom Rate ($)</th>
+                            </tr>
+                            {% for category in imaging_categories %}
+                            <tr>
+                                <td>{{ category }}</td>
+                                <td><input type="number" name="custom_{{ category }}" min="0" step="0.01" placeholder="$"></td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button type="submit">Generate Contract</button>
+    </form>
+    
+    <script>
+        // Show/hide rate inputs based on selected reimbursement method
+        document.addEventListener('DOMContentLoaded', function() {
+            const standardRadio = document.getElementById('standard');
+            const wcfsRadio = document.getElementById('wcfs');
+            const customRadio = document.getElementById('custom');
+            
+            const standardRates = document.getElementById('standard-rates');
+            const wcfsRates = document.getElementById('wcfs-rates');
+            const customRates = document.getElementById('custom-rates');
+            
+            function updateVisibility() {
+                standardRates.style.display = standardRadio.checked ? 'block' : 'none';
+                wcfsRates.style.display = wcfsRadio.checked ? 'block' : 'none';
+                customRates.style.display = customRadio.checked ? 'block' : 'none';
+            }
+            
+            standardRadio.addEventListener('change', updateVisibility);
+            wcfsRadio.addEventListener('change', updateVisibility);
+            customRadio.addEventListener('change', updateVisibility);
+            
+            // Initialize visibility
+            updateVisibility();
+        });
+    </script>
+</body>
+</html>

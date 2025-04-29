@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if contact else 'New' }} Contact{% endblock %}
+
+{% block heading %}{{ 'Edit' if contact else 'New' }} Contact{% endblock %}
+
+{% block additional_styles %}
+<style>
+    form {
+        margin-top: 20px;
+        max-width: 600px;
+    }
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    input, select {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+    button {
+        padding: 10px 15px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 20px;
+    }
+    button:hover {
+        background-color: #45a049;
+    }
+    .back-link {
+        display: inline-block;
+        margin-top: 20px;
+        color: #333;
+        text-decoration: none;
+    }
+    .back-link:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="POST">
+    <label>Name:</label>
+    <input name="name" value="{{ contact.name if contact else '' }}" required>
+
+    <label>Email:</label>
+    <input name="email" value="{{ contact.email if contact else '' }}">
+
+    <label>Phone:</label>
+    <input name="phone" value="{{ contact.phone if contact else '' }}">
+
+    <label>Title:</label>
+    <input name="title" value="{{ contact.title if contact else '' }}">
+
+    <label>Preferred Contact Method:</label>
+    <input name="preferred_contact_method" value="{{ contact.preferred_contact_method if contact else '' }}">
+
+    <label>Provider:</label>
+    <select name="provider_id">
+        {% for p in providers %}
+            <option value="{{ p.id }}" {% if contact and contact.provider_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+    </select>
+
+    <button type="submit">Save</button>
+</form>
+<a href="{{ url_for('contact.list_contacts') }}" class="back-link">Back to list</a>
+{% endblock %} 

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Contacts{% endblock %}
+
+{% block heading %}Contacts{% endblock %}
+
+{% block additional_styles %}
+<style>
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    th, td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+    .action-buttons {
+        margin-bottom: 20px;
+    }
+    .btn {
+        padding: 10px 15px;
+        background-color: #f0f0f0;
+        text-decoration: none;
+        color: #333;
+        border-radius: 4px;
+        margin-right: 10px;
+    }
+    .btn:hover {
+        background-color: #e0e0e0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="action-buttons">
+    <a href="{{ url_for('contact.create_contact') }}" class="btn">Add Contact</a>
+</div>
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th>Title</th>
+        <th>Provider</th>
+        <th>Actions</th>
+    </tr>
+    {% for c in contacts %}
+    <tr>
+        <td>{{ c.name }}</td>
+        <td>{{ c.email }}</td>
+        <td>{{ c.phone }}</td>
+        <td>{{ c.title }}</td>
+        <td>{{ c.provider.name }}</td>
+        <td>
+            <a href="{{ url_for('contact.edit_contact', contact_id=c.id) }}">Edit</a>
+            <form method="POST" action="{{ url_for('contact.delete_contact', contact_id=c.id) }}" style="display:inline;">
+                <button type="submit" onclick="return confirm('Delete contact?')">Delete</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %} 

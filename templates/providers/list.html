@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block title %}Providers{% endblock %}
+
+{% block heading %}Providers{% endblock %}
+
+{% block additional_styles %}
+<style>
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    th, td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+    .action-buttons {
+        margin-bottom: 20px;
+    }
+    .btn {
+        padding: 10px 15px;
+        background-color: #f0f0f0;
+        text-decoration: none;
+        color: #333;
+        border-radius: 4px;
+        margin-right: 10px;
+    }
+    .btn:hover {
+        background-color: #e0e0e0;
+    }
+    .action-link {
+        padding: 5px 10px;
+        background-color: #4CAF50;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        margin-right: 5px;
+        display: inline-block;
+        margin-top: 5px;
+    }
+    .action-link:hover {
+        background-color: #45a049;
+    }
+    .action-button {
+        padding: 5px 10px;
+        background-color: #f44336;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .action-button:hover {
+        background-color: #da190b;
+    }
+    .generate-contract {
+        background-color: #2196F3;
+    }
+    .generate-contract:hover {
+        background-color: #0b7dda;
+    }
+    .download-buttons {
+        margin-top: 5px;
+    }
+    .download-buttons .action-link {
+        background-color: #673AB7;
+    }
+    .download-buttons .action-link:hover {
+        background-color: #5E35B1;
+    }
+    
+    /* Modal styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.4);
+        overflow-y: auto;
+        padding: 20px;
+    }
+    
+    .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 600px;
+        border-radius: 5px;
+        position: relative;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        position: absolute;
+        right: 20px;
+        top: 10px;
+    }
+    
+    .close:hover {
+        color: black;
+    }
+    
+    .rate-input {
+        margin: 10px 0;
+    }
+    
+    .rate-input label {
+        display: block;
+        margin-bottom: 5px;
+    }
+    
+    .rate-input input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .modal-buttons {
+        margin-top: 20px;
+        text-align: right;
+        position: sticky;
+        bottom: 0;
+        background-color: #fefefe;
+        padding-top: 10px;
+        border-top: 1px solid #eee;
+    }
+    
+    .modal-buttons button {
+        margin-left: 10px;
+    }
+
+    .rate-type-selector {
+        margin-bottom: 20px;
+        position: sticky;
+        top: 0;
+        background-color: #fefefe;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+        z-index: 1;
+    }
+
+    .rate-type-selector select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-top: 5px;
+    }
+
+    .rate-section {
+        margin-top: 15px;
+    }
+
+    .rate-section p {
+        color: #666;
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="action-buttons">
+    <a href="{{ url_for('provider.create_provider_with_contacts') }}" class="btn">Add Provider with Contacts</a>
+</div>
+<table>
+    <tr>
+        <th>Name</th>
+        <th>NPI</th>
+        <th>Specialty</th>
+        <th>Status</th>
+        <th>Actions</th>
+    </tr>
+    {% for p in providers %}
+    <tr>
+        <td>{{ p.name }}</td>
+        <td>{{ p.npi }}</td>
+        <td>{{ p.specialty }}</td>
+        <td>{{ p.status }}</td>
+        <td>
+            <a href="{{ url_for('provider.edit_provider', provider_id=p.id) }}" class="action-link">Edit</a>
+            <form method="POST" action="{{ url_for('provider.delete_provider', provider_id=p.id) }}" style="display:inline;">
+                <button type="submit" onclick="return confirm('Delete provider?')" class="action-button">Delete</button>
+            </form>
+            <button type="button" onclick="openCustomRatesModal('{{ p.id }}')" class="action-link generate-contract">Generate Contract</button>
+            {% if p.has_contract_docx() or p.has_contract_pdf() %}
+            <div class="download-buttons">
+                {% if p.has_contract_docx() %}
+                <a href="{{ url_for('intake.download_contract', provider_id=p.id, file_type='docx') }}" class="action-link">Download DOCX</a>
+                {% endif %}
+                {% if p.has_contract_pdf() %}
+                <a href="{{ url_for('intake.download_contract', provider_id=p.id, file_type='pdf') }}" class="action-link">Download PDF</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<!-- Custom Rates Modal -->
+<div id="customRatesModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Contract Rate Options</h2>
+        <form id="customRatesForm" method="POST">
+            <div class="rate-type-selector">
+                <label for="rate_type">Select Rate Type:</label>
+                <select id="rate_type" name="rate_type" onchange="toggleRateInputs()" required>
+                    <option value="standard">Standard Rates</option>
+                    <option value="wcfs">WCFS Percentages</option>
+                    <option value="custom">Custom Dollar Amounts</option>
+                </select>
+            </div>
+
+            <!-- Standard Rates Section -->
+            <div id="standardRates" class="rate-section">
+                <p>Using standard rates from the provider's configuration.</p>
+            </div>
+
+            <!-- WCFS Percentages Section -->
+            <div id="wcfsRates" class="rate-section" style="display: none;">
+                <p>Enter the percentage of WCFS for each imaging type. All fields are required when using WCFS percentages.</p>
+                <div class="rate-input">
+                    <label for="mri_without_wcfs">MRI without Contrast WCFS %:</label>
+                    <input type="number" step="1" min="0" max="100" id="mri_without_wcfs" name="mri_without_wcfs" required>
+                </div>
+                <div class="rate-input">
+                    <label for="mri_with_wcfs">MRI with Contrast WCFS %:</label>
+                    <input type="number" step="1" min="0" max="100" id="mri_with_wcfs" name="mri_with_wcfs">
+                </div>
+                <div class="rate-input">
+                    <label for="mri_both_wcfs">MRI with & without Contrast WCFS %:</label>
+                    <input type="number" step="1" min="0" max="100" id="mri_both_wcfs" name="mri_both_wcfs">
+                </div>
+                <div class="rate-input">
+                    <label for="ct_without_wcfs">CT without Contrast WCFS %:</label>
+                    <input type="number" step="1" min="0" max="100" id="ct_without_wcfs" name="ct_without_wcfs">
+                </div>
+                <div class="rate-input">
+                    <label for="ct_with_wcfs">CT with Contrast WCFS %:</label>
+                    <input type="number" step="1" min="0" max="100" id="ct_with_wcfs" name="ct_with_wcfs">
+                </div>
+                <div class="rate-input">
+                    <label for="ct_both_wcfs">CT with & without Contrast WCFS %:</label>
+                    <input type="number" step="1" min="0" max="100" id="ct_both_wcfs" name="ct_both_wcfs">
+                </div>
+                <div class="rate-input">
+                    <label for="xray_wcfs">X-Ray WCFS %:</label>
+                    <input type="number" step="1" min="0" max="100" id="xray_wcfs" name="xray_wcfs">
+                </div>
+                <div class="rate-input">
+                    <label for="arthrogram_wcfs">Arthrogram WCFS %:</label>
+                    <input type="number" step="1" min="0" max="100" id="arthrogram_wcfs" name="arthrogram_wcfs">
+                </div>
+            </div>
+
+            <!-- Custom Dollar Amounts Section -->
+            <div id="customRates" class="rate-section" style="display: none;">
+                <p>Enter the dollar amount for each imaging type. All fields are required when using custom rates.</p>
+                <div class="rate-input">
+                    <label for="mri_without_rate">MRI without Contrast Rate ($):</label>
+                    <input type="number" step="0.01" min="0" id="mri_without_rate" name="mri_without_rate">
+                </div>
+                <div class="rate-input">
+                    <label for="mri_with_rate">MRI with Contrast Rate ($):</label>
+                    <input type="number" step="0.01" min="0" id="mri_with_rate" name="mri_with_rate">
+                </div>
+                <div class="rate-input">
+                    <label for="mri_both_rate">MRI with & without Contrast Rate ($):</label>
+                    <input type="number" step="0.01" min="0" id="mri_both_rate" name="mri_both_rate">
+                </div>
+                <div class="rate-input">
+                    <label for="ct_without_rate">CT without Contrast Rate ($):</label>
+                    <input type="number" step="0.01" min="0" id="ct_without_rate" name="ct_without_rate">
+                </div>
+                <div class="rate-input">
+                    <label for="ct_with_rate">CT with Contrast Rate ($):</label>
+                    <input type="number" step="0.01" min="0" id="ct_with_rate" name="ct_with_rate">
+                </div>
+                <div class="rate-input">
+                    <label for="ct_both_rate">CT with & without Contrast Rate ($):</label>
+                    <input type="number" step="0.01" min="0" id="ct_both_rate" name="ct_both_rate">
+                </div>
+                <div class="rate-input">
+                    <label for="xray_rate">X-Ray Rate ($):</label>
+                    <input type="number" step="0.01" min="0" id="xray_rate" name="xray_rate">
+                </div>
+                <div class="rate-input">
+                    <label for="arthrogram_rate">Arthrogram Rate ($):</label>
+                    <input type="number" step="0.01" min="0" id="arthrogram_rate" name="arthrogram_rate">
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button type="button" class="btn" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="action-link generate-contract">Generate Contract</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Get the modal
+    var modal = document.getElementById("customRatesModal");
+    
+    // Get the <span> element that closes the modal
+    var span = document.getElementsByClassName("close")[0];
+    
+    // Function to open modal and set up form
+    function openCustomRatesModal(providerId) {
+        modal.style.display = "block";
+        document.getElementById("customRatesForm").action = `/providers/${providerId}/generate_contract`;
+        console.log("Form action set to:", document.getElementById("customRatesForm").action);
+        toggleRateInputs(); // Initialize the form state
+    }
+    
+    // Function to close modal
+    function closeModal() {
+        modal.style.display = "none";
+    }
+    
+    // When the user clicks on <span> (x), close the modal
+    span.onclick = function() {
+        closeModal();
+    }
+    
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            closeModal();
+        }
+    }
+
+    // Add form submission handler
+    document.getElementById("customRatesForm").addEventListener("submit", function(event) {
+        console.log("Form submitted");
+        const rateType = document.getElementById('rate_type').value;
+        console.log("Selected rate type:", rateType);
+    });
+
+    function toggleRateInputs() {
+        const rateType = document.getElementById('rate_type').value;
+        const standardSection = document.getElementById('standardRates');
+        const wcfsSection = document.getElementById('wcfsRates');
+        const customSection = document.getElementById('customRates');
+
+        console.log("Toggling rate inputs for:", rateType);
+
+        // Hide all sections first
+        standardSection.style.display = 'none';
+        wcfsSection.style.display = 'none';
+        customSection.style.display = 'none';
+
+        // Show the selected section
+        if (rateType === 'standard') {
+            standardSection.style.display = 'block';
+            // Remove required from other inputs
+            document.querySelectorAll('#wcfsRates input, #customRates input').forEach(input => input.required = false);
+        } else if (rateType === 'wcfs') {
+            wcfsSection.style.display = 'block';
+            // Make WCFS inputs required
+            document.querySelectorAll('#wcfsRates input').forEach(input => input.required = true);
+            document.querySelectorAll('#customRates input').forEach(input => input.required = false);
+        } else if (rateType === 'custom') {
+            customSection.style.display = 'block';
+            // Make custom rate inputs required
+            document.querySelectorAll('#customRates input').forEach(input => input.required = true);
+            document.querySelectorAll('#wcfsRates input').forEach(input => input.required = false);
+        }
+    }
+</script>
+{% endblock %} 

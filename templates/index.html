@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}CRM Portal{% endblock %}
+
+{% block heading %}Welcome to Your CRM Portal{% endblock %}
+
+{% block content %}
+<p>This is the starting point for managing providers, contacts, and outreach.</p>
+
+<div class="nav-links">
+    <a href="{{ url_for('provider.list_providers') }}">Manage Providers</a>
+    <a href="{{ url_for('contact.list_contacts') }}">Manage Contacts</a>
+    <a href="{{ url_for('outreach.list_outreach') }}">Manage Outreach</a>
+</div>
+{% endblock %} 

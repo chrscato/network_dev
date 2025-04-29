@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Provider Intake{% endblock %}
+
+{% block heading %}Provider Intake{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .form-container {
+        display: flex;
+        gap: 30px;
+    }
+    .provider-form, .contacts-form {
+        flex: 1;
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-radius: 5px;
+    }
+    .section {
+        margin-bottom: 20px;
+    }
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    input, select, textarea {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+    .contact-row {
+        background-color: white;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+    }
+    .contact-row input {
+        margin-bottom: 10px;
+    }
+    button {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .submit-btn {
+        background-color: #4CAF50;
+        color: white;
+        width: 100%;
+        margin-top: 20px;
+    }
+    .submit-btn:hover {
+        background-color: #45a049;
+    }
+    .add-contact-btn {
+        background-color: #2196F3;
+        color: white;
+        width: 100%;
+    }
+    .add-contact-btn:hover {
+        background-color: #0b7dda;
+    }
+    .remove-contact-btn {
+        background-color: #f44336;
+        color: white;
+        padding: 5px 10px;
+        margin-top: 5px;
+    }
+    .remove-contact-btn:hover {
+        background-color: #da190b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="POST">
+    <div class="form-container">
+        <div class="provider-form">
+            <h2>Provider Information</h2>
+            
+            <label>Legal Name (Required):</label>
+            <input name="name" required><br>
+            
+            <label>DBA Name:</label>
+            <input name="dba_name"><br>
+            
+            <label>Address:</label>
+            <input name="address"><br>
+            
+            <label>Provider Type:</label>
+            <select name="provider_type">
+                <option value="Imaging">Imaging</option>
+                <option value="EMG">EMG</option>
+                <option value="HH">HH</option>
+                <option value="DME">DME</option>
+                <option value="Imaging/EMG">Imaging/EMG</option>
+            </select><br>
+            
+            <label>States to Mention in Contract:</label>
+            <input name="states" placeholder="e.g., CA, NY, TX"><br>
+        </div>
+        
+        <div class="contacts-form">
+            <h2>Contacts</h2>
+            <div id="contacts">
+                <div class="contact-row">
+                    <input name="contact_name[]" placeholder="Contact Name" required>
+                    <input name="contact_phone[]" placeholder="Phone">
+                    <input name="contact_email[]" placeholder="Email">
+                </div>
+            </div>
+            <button type="button" class="add-contact-btn" onclick="addContactRow()">+ Add Another Contact</button>
+        </div>
+    </div>
+    
+    <button type="submit" class="submit-btn">Save Provider and Contacts</button>
+</form>
+<a href="{{ url_for('provider.list_providers') }}">Back to Providers</a>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addContactRow() {
+    const container = document.getElementById("contacts");
+    const row = document.createElement("div");
+    row.className = "contact-row";
+    row.innerHTML = `
+        <input name="contact_name[]" placeholder="Contact Name" required>
+        <input name="contact_phone[]" placeholder="Phone">
+        <input name="contact_email[]" placeholder="Email">
+        <button type="button" class="remove-contact-btn" onclick="this.parentNode.remove()">Remove Contact</button>
+    `;
+    container.appendChild(row);
+}
+</script>
+{% endblock %} 

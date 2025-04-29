@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if outreach else 'New' }} Outreach{% endblock %}
+
+{% block heading %}{{ 'Edit' if outreach else 'New' }} Outreach{% endblock %}
+
+{% block additional_styles %}
+<style>
+    form {
+        margin-top: 20px;
+        max-width: 600px;
+    }
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+    }
+    input, select, textarea {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+    textarea {
+        height: 100px;
+        vertical-align: top;
+    }
+    button {
+        padding: 10px 15px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 20px;
+    }
+    button:hover {
+        background-color: #45a049;
+    }
+    .back-link {
+        display: inline-block;
+        margin-top: 20px;
+        color: #333;
+        text-decoration: none;
+    }
+    .back-link:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="POST">
+    <label>Provider:</label>
+    <select name="provider_id">
+        {% for p in providers %}
+            <option value="{{ p.id }}" {% if outreach and outreach.provider_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+    </select>
+
+    <label>Contact (optional):</label>
+    <select name="contact_id">
+        <option value="">-- None --</option>
+        {% for c in contacts %}
+            <option value="{{ c.id }}" {% if outreach and outreach.contact_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+    </select>
+
+    <label>Method:</label>
+    <input name="method" value="{{ outreach.method if outreach else '' }}">
+
+    <label>Status:</label>
+    <input name="status" value="{{ outreach.status if outreach else '' }}">
+
+    <label>Notes:</label>
+    <textarea name="notes">{{ outreach.notes if outreach else '' }}</textarea>
+
+    <button type="submit">Save</button>
+</form>
+<a href="{{ url_for('outreach.list_outreach') }}" class="back-link">Back to list</a>
+{% endblock %} 
