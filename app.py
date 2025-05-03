@@ -7,6 +7,10 @@ from routes.providers import provider_bp
 from routes.contacts import contact_bp
 from routes.outreach import outreach_bp
 from routes.intake import intake_bp
+# In app.py, add this import
+from routes.test_api import test_api_bp
+
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -18,12 +22,14 @@ app.register_blueprint(provider_bp)
 app.register_blueprint(contact_bp)
 app.register_blueprint(outreach_bp)
 app.register_blueprint(intake_bp)
+app.register_blueprint(test_api_bp)
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
+# Make sure your app is running on all interfaces
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(debug=True) 
+    app.run(host='0.0.0.0', port=5000, debug=True, ssl_context='adhoc')  # Note the host='0.0.0.0'
