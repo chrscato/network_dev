@@ -9,6 +9,7 @@ from routes.outreach import outreach_bp
 from routes.intake import intake_bp
 # In app.py, add this import
 from routes.test_api import test_api_bp
+from routes.email import email_bp
 
 
 
@@ -23,6 +24,7 @@ app.register_blueprint(contact_bp)
 app.register_blueprint(outreach_bp)
 app.register_blueprint(intake_bp)
 app.register_blueprint(test_api_bp)
+app.register_blueprint(email_bp)
 
 @app.route("/")
 def home():
@@ -32,4 +34,4 @@ def home():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(host='0.0.0.0', port=5000, debug=True, ssl_context='adhoc')  # Note the host='0.0.0.0'
+    app.run(host='127.0.0.1', port=5000, debug=True)  # Using localhost

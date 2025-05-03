@@ -53,4 +53,12 @@ def delete_outreach(outreach_id):
     db.session.delete(outreach)
     db.session.commit()
     flash("Outreach deleted.")
-    return redirect(url_for("outreach.list_outreach")) 
+    return redirect(url_for("outreach.list_outreach"))
+
+@outreach_bp.route("/run-jobs")
+def run_jobs():
+    return render_template("outreach/run_jobs.html")
+
+@outreach_bp.route("/monitoring")
+def monitoring():
+    return render_template("outreach/monitoring.html") 

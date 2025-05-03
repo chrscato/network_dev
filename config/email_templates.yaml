@@ -1,0 +1,47 @@
+templates:
+  provider_outreach_cold:
+    subject: "Clarity-dx Provider Outreach - {provider_name}"
+    body: {
+      "metadata": {
+        "email_type": "provider_outreach_cold",
+        "timestamp": "{timestamp}",
+        "template_version": "1.0",
+        "provider_id": "{provider_id}"
+      },
+      "provider": {
+        "basic_info": {
+          "name": "{provider_name}",
+          "dba_name": "{dba_name}",
+          "npi": "{npi}",
+          "specialty": "{specialty}",
+          "provider_type": "{provider_type}"
+        },
+        "location": {
+          "address": "{address}",
+          "states": "{states}"
+        },
+        "status": {
+          "current_status": "{status}"
+        }
+      },
+      "contacts": [
+        {
+          "name": "{recipient_name}",
+          "title": "{contact_title}",
+          "email": "{contact_email}",
+          "phone": "{contact_phone}",
+          "preferred_contact_method": "{preferred_contact}"
+        }
+      ],
+      "attachments": [
+        {
+          "filename": "{dba_name}_Agreement.pdf",
+          "path": "contracts/{dba_name}_Agreement.pdf",
+          "mime_type": "application/pdf"
+        }
+      ],
+      "outreach_template": {
+        "subject": "Clarity-dx Contract for Partnership with {provider_name}",
+        "body": "Dear {recipient_name},\n\nMy name is Kim Vileno, and I represent Clarity dx. We are expanding our radiology network and are looking for a reliable partner to refer our workers' compensation patients to. We believe that your facility, {provider_name}{specialty_info}, would be an excellent fit to perform radiology exams for our referrals.\n\nAs the authorizer and scheduler of the exams, Clarity dx will be the payor. Our company was founded with the simple formula of \"Right Read. Right Radiologist. Right Result.\" We are dedicated to providing specialized diagnostic imaging services, and we believe that your facility can provide the coverage that our referrals will need in the area.\n\nPlease find attached the agreement that outlines the terms of our potential partnership. If you have any questions, please do not hesitate to contact me. You can also visit our website at www.clarity-dx.com to learn more about our company.\n\nThank you for your consideration, and we look forward to the opportunity to work together.\n\nBest regards,\nKim Vileno"
+      }
+    } 

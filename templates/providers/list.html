@@ -198,6 +198,7 @@
                 <button type="submit" onclick="return confirm('Delete provider?')" class="action-button">Delete</button>
             </form>
             <button type="button" onclick="openCustomRatesModal('{{ p.id }}')" class="action-link generate-contract">Generate Contract</button>
+            <button type="button" onclick="openEmailModal('{{ p.id }}')" class="action-link" style="background-color: #9C27B0;">Send Email</button>
             {% if p.has_contract_docx() or p.has_contract_pdf() %}
             <div class="download-buttons">
                 {% if p.has_contract_docx() %}
@@ -315,6 +316,47 @@
     </div>
 </div>
 
+<!-- Email Modal -->
+<div id="emailModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeEmailModal()">&times;</span>
+        <h2>Send Email</h2>
+        <form id="emailForm">
+            <input type="hidden" name="provider_id" id="emailProviderId">
+            
+            <div class="rate-type-selector">
+                <label for="email_type">Select Email Type:</label>
+                <select id="email_type" name="email_type" onchange="toggleEmailInputs()" required>
+                    <option value="standard">Provider Outreach - Cold</option>
+                    <option value="custom">Custom Message</option>
+                </select>
+            </div>
+
+            <!-- Standard Email Section -->
+            <div id="standardEmail" class="rate-section">
+                <p>This will send a cold outreach email template to the provider.</p>
+            </div>
+
+            <!-- Custom Email Section -->
+            <div id="customEmail" class="rate-section" style="display: none;">
+                <div class="rate-input">
+                    <label for="email_subject">Subject:</label>
+                    <input type="text" id="email_subject" name="email_subject">
+                </div>
+                <div class="rate-input">
+                    <label for="email_body">Message:</label>
+                    <textarea id="email_body" name="email_body" rows="10"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button type="button" onclick="closeEmailModal()">Cancel</button>
+                <button type="submit">Send Email</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -387,5 +429,85 @@
             document.querySelectorAll('#wcfsRates input').forEach(input => input.required = false);
         }
     }
+
+    function openEmailModal(providerId) {
+        document.getElementById('emailProviderId').value = providerId;
+        document.getElementById('emailModal').style.display = 'block';
+    }
+
+    function closeEmailModal() {
+        document.getElementById('emailModal').style.display = 'none';
+    }
+
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('emailModal')) {
+            closeEmailModal();
+        }
+        if (event.target == document.getElementById('customRatesModal')) {
+            closeCustomRatesModal();
+        }
+    }
+
+    function toggleEmailInputs() {
+        const emailType = document.getElementById('email_type').value;
+        const standardSection = document.getElementById('standardEmail');
+        const customSection = document.getElementById('customEmail');
+
+        // Hide all sections first
+        standardSection.style.display = 'none';
+        customSection.style.display = 'none';
+
+        // Show the selected section
+        if (emailType === 'standard') {
+            standardSection.style.display = 'block';
+            // Remove required from custom inputs
+            document.getElementById('email_subject').required = false;
+            document.getElementById('email_body').required = false;
+        } else if (emailType === 'custom') {
+            customSection.style.display = 'block';
+            // Make custom inputs required
+            document.getElementById('email_subject').required = true;
+            document.getElementById('email_body').required = true;
+        }
+    }
+
+    // Add form submission handler for email form
+    document.getElementById("emailForm").addEventListener("submit", function(event) {
+        event.preventDefault(); // Prevent default form submission
+        
+        const providerId = document.getElementById('emailProviderId').value;
+        const emailType = document.getElementById('email_type').value;
+        
+        // Prepare the data
+        const data = {
+            provider_id: providerId,
+            template_name: emailType === 'standard' ? 'provider_outreach_cold' : 'custom'
+        };
+        
+        // Send the request
+        fetch('/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('Error: ' + data.error);
+            } else {
+                alert('Email sent successfully!');
+                closeEmailModal();
+                // Optionally refresh the page or update the UI
+                window.location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error sending email. Please check the console for details.');
+        });
+    });
 </script>
 {% endblock %} 

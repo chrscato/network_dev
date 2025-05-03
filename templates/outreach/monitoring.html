@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Monitoring{% endblock %}
+
+{% block heading %}Monitoring{% endblock %}
+
+{% block additional_styles %}
+<style>
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    th, td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+    .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    .status-outreach {
+        background-color: #ff9800;  /* Orange */
+    }
+    .status-contracted {
+        background-color: #4CAF50;  /* Green */
+    }
+    .status-not-interested {
+        background-color: #f44336;  /* Red */
+    }
+    .status-pending {
+        background-color: #2196F3;  /* Blue */
+    }
+    .date-info {
+        font-size: 0.85em;
+        color: #666;
+        margin-top: 3px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<table>
+    <tr>
+        <th>Name</th>
+        <th>NPI</th>
+        <th>Specialty</th>
+        <th>Status</th>
+        <th>Notes</th>
+    </tr>
+    {% for p in providers %}
+    <tr>
+        <td>{{ p.name }}</td>
+        <td>{{ p.npi }}</td>
+        <td>{{ p.specialty }}</td>
+        <td>
+            <span class="status-indicator status-{{ p.status|lower|replace(' ', '-') }}"></span>
+            {{ p.status }}
+        </td>
+        <td>
+            {% if p.status == "Outreach - No Reply" %}
+            <div class="date-info">Last sent: {{ p.last_sent }}</div>
+            {% elif p.status == "Outreach - Replied" %}
+            <div class="date-info">Last received: {{ p.last_received }}</div>
+            {% elif p.status == "Not Interested" %}
+            <div class="date-info">Date of disinterest: {{ p.date_of_disinterest }}</div>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %} 

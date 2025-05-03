@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Run Jobs{% endblock %}
+
+{% block heading %}Run Jobs{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .job-section {
+        margin: 20px 0;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+    .job-section h3 {
+        margin-top: 0;
+        color: #333;
+    }
+    .job-actions {
+        margin-top: 15px;
+    }
+    .btn {
+        padding: 8px 16px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-right: 10px;
+    }
+    .btn:hover {
+        background-color: #45a049;
+    }
+    .btn-secondary {
+        background-color: #6c757d;
+    }
+    .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="job-section">
+    <h3>Outreach Jobs</h3>
+    <p>Run and manage outreach campaigns and automated tasks.</p>
+    <div class="job-actions">
+        <button class="btn">Run New Campaign</button>
+        <button class="btn btn-secondary">View Job History</button>
+    </div>
+</div>
+
+<div class="job-section">
+    <h3>Recent Jobs</h3>
+    <p>No recent jobs found.</p>
+</div>
+{% endblock %} 

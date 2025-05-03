@@ -27,6 +27,32 @@
         .nav-links a:hover {
             background-color: #e0e0e0;
         }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 4px;
+        }
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            background-color: #f9f9f9;
+        }
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
         .flashes {
             list-style-type: none;
             padding: 0;
@@ -51,7 +77,14 @@
         <a href="{{ url_for('home') }}">Home</a>
         <a href="{{ url_for('provider.list_providers') }}">Providers</a>
         <a href="{{ url_for('contact.list_contacts') }}">Contacts</a>
-        <a href="{{ url_for('outreach.list_outreach') }}">Outreach</a>
+        <div class="dropdown">
+            <a href="{{ url_for('outreach.list_outreach') }}">Outreach</a>
+            <div class="dropdown-content">
+                <a href="{{ url_for('outreach.list_outreach') }}">Log</a>
+                <a href="{{ url_for('outreach.run_jobs') }}">Run Jobs</a>
+                <a href="{{ url_for('outreach.monitoring') }}">Monitoring</a>
+            </div>
+        </div>
     </div>
     
     {% with messages = get_flashed_messages() %}

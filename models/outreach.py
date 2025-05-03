@@ -9,6 +9,7 @@ class Outreach(db.Model):
     provider_id = db.Column(db.String, db.ForeignKey('providers.id'), nullable=False)
     contact_id = db.Column(db.String, db.ForeignKey('contacts.id'))
     method = db.Column(db.String(50))  # email, phone, etc.
+    type = db.Column(db.String(50))  # cold, follow-up, etc.
     notes = db.Column(db.Text)
     status = db.Column(db.String(50))  # pending, completed, etc.
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
