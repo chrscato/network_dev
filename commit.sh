@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Commit and push to GitHub
+# Force add and commit all changes
 git add .
-git commit -m "Update: $(date)"
+git commit -m "Auto-deploy: $(date)" || true  # || true ensures script continues even if no changes
 git push origin master 
