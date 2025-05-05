@@ -96,14 +96,20 @@ SECRET_KEY=your-secret-key-here
 EOL
     fi
 
-    # Run database migrations
+    # Create virtual environment in deployment directory
     cd /srv/network_dev
+    if [ ! -d "venv" ]; then
+        python3 -m venv venv
+    fi
+    source venv/bin/activate
+    pip install flask flask-sqlalchemy flask-migrate python-dotenv
+
+    # Run database migrations
     export FLASK_APP=app.py
     flask db upgrade
 
-    # Create systemd service if it doesn't exist
-    if [ ! -f /etc/systemd/system/network_dev.service ]; then
-        cat > /etc/systemd/system/network_dev.service << 'EOL'
+    # Create systemd service
+    cat > /etc/systemd/system/network_dev.service << 'EOL'
 [Unit]
 Description=Network Development Portal
 After=network.target
@@ -114,18 +120,25 @@ WorkingDirectory=/srv/network_dev
 Environment="PATH=/srv/network_dev/venv/bin"
 Environment="FLASK_APP=app.py"
 Environment="FLASK_ENV=production"
+Environment="PYTHONUNBUFFERED=1"
 ExecStart=/srv/network_dev/venv/bin/python -m flask run --host=0.0.0.0
 Restart=always
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
 
 [Install]
 WantedBy=multi-user.target
 EOL
-        systemctl daemon-reload
-        systemctl enable network_dev
-    fi
 
-    # Restart the application service
-    systemctl restart network_dev
+    # Reload systemd and restart service
+    systemctl daemon-reload
+    systemctl enable network_dev
+    systemctl stop network_dev
+    sleep 2
+    systemctl start network_dev
+    sleep 2
+    systemctl status network_dev
 EOF
 
 # Check if the deployment was successful
