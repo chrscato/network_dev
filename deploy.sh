@@ -53,12 +53,14 @@ ssh $REMOTE_HOST << 'EOF'
     mkdir -p /srv/network_dev
     mkdir -p /opt/network_dev/backups
 
-    # Update code in /opt/network_dev
+    # Clean and update code in /opt/network_dev
     cd /opt/network_dev
     if [ -d .git ]; then
         git fetch origin
         git reset --hard origin/master
+        git clean -fd
     else
+        rm -rf /opt/network_dev/*
         git clone git@github.com:chrscato/network_dev.git .
     fi
 
@@ -70,6 +72,10 @@ ssh $REMOTE_HOST << 'EOF'
     # Activate virtual environment and install dependencies
     source venv/bin/activate
     pip install flask flask-sqlalchemy flask-migrate python-dotenv
+
+    # Clean and prepare deployment directory
+    rm -rf /srv/network_dev/*
+    mkdir -p /srv/network_dev
 
     # Sync code to deployment directory, excluding sensitive files
     rsync -av --delete \
@@ -103,6 +109,12 @@ EOL
     fi
     source venv/bin/activate
     pip install flask flask-sqlalchemy flask-migrate python-dotenv
+
+    # Initialize Flask-Migrate if not already done
+    if [ ! -d "migrations" ]; then
+        export FLASK_APP=app.py
+        flask db init
+    fi
 
     # Run database migrations
     export FLASK_APP=app.py
@@ -148,4 +160,11 @@ if [ $? -eq 0 ]; then
 else
     print_error "Deployment failed!"
     exit 1
-fi 
+fi
+
+# Run all deployment steps
+./commit.sh
+./pull.sh
+./sync.sh
+
+echo "✅ Deployment complete!" 
