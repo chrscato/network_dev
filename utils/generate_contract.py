@@ -50,7 +50,7 @@ def get_rates_by_method(provider_id, method, custom_rates=None, wcfs_percentages
         wcfs_percentages: Dictionary of WCFS percentages for each category (for 'wcfs' method)
     
     Returns:
-        Dictionary of rates for each imaging category
+        Dictionary of rates for each imaging category and state
     """
     provider = Provider.query.get(provider_id)
     if not provider:
@@ -77,19 +77,20 @@ def get_rates_by_method(provider_id, method, custom_rates=None, wcfs_percentages
     }
     
     if method == 'standard':
-        # Get rates from standard_rates table for each category
-        state = states[0]  # Use first state's rates
-        for category in IMAGING_CATEGORIES:
-            standard_rate = StandardRates.query.filter_by(
-                state=state,
-                category=category
-            ).first()
-            
-            if standard_rate:
-                rates[category] = standard_rate.rate
-            else:
-                # Fallback to default rates if not found in DB
-                rates[category] = IMAGING_RATES.get(category, 0)
+        # Get rates from standard_rates table for each state and category
+        for state in states:
+            rates[state] = {}
+            for category in IMAGING_CATEGORIES:
+                standard_rate = StandardRates.query.filter_by(
+                    state=state,
+                    category=category
+                ).first()
+                
+                if standard_rate:
+                    rates[state][category] = standard_rate.rate
+                else:
+                    # Fallback to default rates if not found in DB
+                    rates[state][category] = IMAGING_RATES.get(category, 0)
     
     elif method == 'wcfs':
         # Apply WCFS percentages to standard rates
@@ -97,25 +98,29 @@ def get_rates_by_method(provider_id, method, custom_rates=None, wcfs_percentages
             raise ValueError("WCFS percentages must be provided for WCFS method")
         
         # Store the WCFS percentages in the rates dictionary
-        for form_field, category in category_mapping.items():
-            if form_field in wcfs_percentages:
-                # Store the percentage as an integer
-                rates[category] = int(wcfs_percentages[form_field])
-            else:
-                # Use 0 if no percentage provided
-                rates[category] = 0
+        for state in states:
+            rates[state] = {}
+            for form_field, category in category_mapping.items():
+                if form_field in wcfs_percentages.get(state, {}):
+                    # Store the percentage as an integer
+                    rates[state][category] = int(wcfs_percentages[state][form_field])
+                else:
+                    # Use 0 if no percentage provided
+                    rates[state][category] = 0
     
     elif method == 'custom':
         # Use custom rates provided by the user
         if not custom_rates:
             raise ValueError("Custom rates must be provided for custom method")
         
-        for form_field, category in category_mapping.items():
-            if form_field in custom_rates:
-                rates[category] = custom_rates[form_field]
-            else:
-                # Use default rate if no custom rate provided
-                rates[category] = IMAGING_RATES.get(category, 0)
+        for state in states:
+            rates[state] = {}
+            for form_field, category in category_mapping.items():
+                if form_field in custom_rates.get(state, {}):
+                    rates[state][category] = custom_rates[state][form_field]
+                else:
+                    # Use default rate if no custom rate provided
+                    rates[state][category] = IMAGING_RATES.get(category, 0)
     
     else:
         raise ValueError(f"Invalid reimbursement method: {method}")
@@ -167,11 +172,18 @@ def create_rates_table(doc, states, rates, method='standard', wcfs_percentages=N
             row_cells[1].text = procedure
             
             if method == 'wcfs':
-                # Get the percentage from the rates dictionary
-                percentage = rates.get(procedure, 0)
+                # Get the percentage for this state and procedure
+                if wcfs_percentages and state in wcfs_percentages:
+                    percentage = wcfs_percentages[state].get(procedure, 0)
+                else:
+                    percentage = 0
                 row_cells[2].text = f"{percentage}% of WCFS"
             else:
-                rate = rates.get(procedure, 0)
+                # Get the rate for this state and procedure
+                if state in rates and procedure in rates[state]:
+                    rate = rates[state][procedure]
+                else:
+                    rate = 0
                 row_cells[2].text = f"${rate:.2f}"
             
     return table

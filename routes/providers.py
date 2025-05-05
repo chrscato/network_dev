@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import db
 from models.provider import Provider
 from models.contact import Contact
@@ -77,4 +77,27 @@ def create_provider_with_contacts():
         flash("Provider and contacts created successfully!")
         return redirect(url_for("provider.list_providers"))
 
-    return render_template("providers/new_with_contacts.html") 
+    return render_template("providers/new_with_contacts.html")
+
+@provider_bp.route("/api/providers/<provider_id>")
+def get_provider_api(provider_id):
+    print(f"Fetching provider with ID: {provider_id}")  # Debug log
+    provider = Provider.query.get(provider_id)
+    if not provider:
+        print(f"Provider not found for ID: {provider_id}")  # Debug log
+        return jsonify({"error": "Provider not found"}), 404
+    
+    print(f"Found provider: {provider.name}")  # Debug log
+    print(f"States in contract: {provider.states_in_contract}")  # Debug log
+    
+    return jsonify({
+        "id": provider.id,
+        "name": provider.name,
+        "dba_name": provider.dba_name,
+        "address": provider.address,
+        "provider_type": provider.provider_type,
+        "states_in_contract": provider.states_in_contract,
+        "npi": provider.npi,
+        "specialty": provider.specialty,
+        "status": provider.status
+    }) 

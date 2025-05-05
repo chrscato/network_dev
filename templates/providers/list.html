@@ -171,6 +171,58 @@
         color: #666;
         font-style: italic;
     }
+
+    .state-rates-container {
+        margin-top: 20px;
+    }
+    
+    .state-rates-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .state-rates-header h3 {
+        margin: 0;
+    }
+    
+    .apply-all-btn {
+        background-color: #2196F3;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    
+    .apply-all-btn:hover {
+        background-color: #0b7dda;
+    }
+    
+    .state-rate-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+    }
+    
+    .state-rate-table th,
+    .state-rate-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    
+    .state-rate-table th {
+        background-color: #f2f2f2;
+    }
+    
+    .state-rate-table input {
+        width: 100%;
+        padding: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
 </style>
 {% endblock %}
 
@@ -236,75 +288,29 @@
 
             <!-- WCFS Percentages Section -->
             <div id="wcfsRates" class="rate-section" style="display: none;">
-                <p>Enter the percentage of WCFS for each imaging type. All fields are required when using WCFS percentages.</p>
-                <div class="rate-input">
-                    <label for="mri_without_wcfs">MRI without Contrast WCFS %:</label>
-                    <input type="number" step="1" min="0" max="100" id="mri_without_wcfs" name="mri_without_wcfs" required>
-                </div>
-                <div class="rate-input">
-                    <label for="mri_with_wcfs">MRI with Contrast WCFS %:</label>
-                    <input type="number" step="1" min="0" max="100" id="mri_with_wcfs" name="mri_with_wcfs">
-                </div>
-                <div class="rate-input">
-                    <label for="mri_both_wcfs">MRI with & without Contrast WCFS %:</label>
-                    <input type="number" step="1" min="0" max="100" id="mri_both_wcfs" name="mri_both_wcfs">
-                </div>
-                <div class="rate-input">
-                    <label for="ct_without_wcfs">CT without Contrast WCFS %:</label>
-                    <input type="number" step="1" min="0" max="100" id="ct_without_wcfs" name="ct_without_wcfs">
-                </div>
-                <div class="rate-input">
-                    <label for="ct_with_wcfs">CT with Contrast WCFS %:</label>
-                    <input type="number" step="1" min="0" max="100" id="ct_with_wcfs" name="ct_with_wcfs">
-                </div>
-                <div class="rate-input">
-                    <label for="ct_both_wcfs">CT with & without Contrast WCFS %:</label>
-                    <input type="number" step="1" min="0" max="100" id="ct_both_wcfs" name="ct_both_wcfs">
-                </div>
-                <div class="rate-input">
-                    <label for="xray_wcfs">X-Ray WCFS %:</label>
-                    <input type="number" step="1" min="0" max="100" id="xray_wcfs" name="xray_wcfs">
-                </div>
-                <div class="rate-input">
-                    <label for="arthrogram_wcfs">Arthrogram WCFS %:</label>
-                    <input type="number" step="1" min="0" max="100" id="arthrogram_wcfs" name="arthrogram_wcfs">
+                <p>Enter WCFS percentage for each category:</p>
+                <div class="state-rates-container">
+                    <div class="state-rates-header">
+                        <h3>State-Specific Rates</h3>
+                        <button type="button" class="apply-all-btn" onclick="applyToAllStates('wcfs')">Apply to All States</button>
+                    </div>
+                    <div id="wcfsStateRates">
+                        <!-- State-specific rate inputs will be dynamically added here -->
+                    </div>
                 </div>
             </div>
 
             <!-- Custom Dollar Amounts Section -->
             <div id="customRates" class="rate-section" style="display: none;">
-                <p>Enter the dollar amount for each imaging type. All fields are required when using custom rates.</p>
-                <div class="rate-input">
-                    <label for="mri_without_rate">MRI without Contrast Rate ($):</label>
-                    <input type="number" step="0.01" min="0" id="mri_without_rate" name="mri_without_rate">
-                </div>
-                <div class="rate-input">
-                    <label for="mri_with_rate">MRI with Contrast Rate ($):</label>
-                    <input type="number" step="0.01" min="0" id="mri_with_rate" name="mri_with_rate">
-                </div>
-                <div class="rate-input">
-                    <label for="mri_both_rate">MRI with & without Contrast Rate ($):</label>
-                    <input type="number" step="0.01" min="0" id="mri_both_rate" name="mri_both_rate">
-                </div>
-                <div class="rate-input">
-                    <label for="ct_without_rate">CT without Contrast Rate ($):</label>
-                    <input type="number" step="0.01" min="0" id="ct_without_rate" name="ct_without_rate">
-                </div>
-                <div class="rate-input">
-                    <label for="ct_with_rate">CT with Contrast Rate ($):</label>
-                    <input type="number" step="0.01" min="0" id="ct_with_rate" name="ct_with_rate">
-                </div>
-                <div class="rate-input">
-                    <label for="ct_both_rate">CT with & without Contrast Rate ($):</label>
-                    <input type="number" step="0.01" min="0" id="ct_both_rate" name="ct_both_rate">
-                </div>
-                <div class="rate-input">
-                    <label for="xray_rate">X-Ray Rate ($):</label>
-                    <input type="number" step="0.01" min="0" id="xray_rate" name="xray_rate">
-                </div>
-                <div class="rate-input">
-                    <label for="arthrogram_rate">Arthrogram Rate ($):</label>
-                    <input type="number" step="0.01" min="0" id="arthrogram_rate" name="arthrogram_rate">
+                <p>Enter custom rate for each category:</p>
+                <div class="state-rates-container">
+                    <div class="state-rates-header">
+                        <h3>State-Specific Rates</h3>
+                        <button type="button" class="apply-all-btn" onclick="applyToAllStates('custom')">Apply to All States</button>
+                    </div>
+                    <div id="customStateRates">
+                        <!-- State-specific rate inputs will be dynamically added here -->
+                    </div>
                 </div>
             </div>
 
@@ -405,8 +411,6 @@
         const wcfsSection = document.getElementById('wcfsRates');
         const customSection = document.getElementById('customRates');
 
-        console.log("Toggling rate inputs for:", rateType);
-
         // Hide all sections first
         standardSection.style.display = 'none';
         wcfsSection.style.display = 'none';
@@ -415,19 +419,144 @@
         // Show the selected section
         if (rateType === 'standard') {
             standardSection.style.display = 'block';
-            // Remove required from other inputs
-            document.querySelectorAll('#wcfsRates input, #customRates input').forEach(input => input.required = false);
         } else if (rateType === 'wcfs') {
             wcfsSection.style.display = 'block';
-            // Make WCFS inputs required
-            document.querySelectorAll('#wcfsRates input').forEach(input => input.required = true);
-            document.querySelectorAll('#customRates input').forEach(input => input.required = false);
+            createStateRateInputs('wcfs');
         } else if (rateType === 'custom') {
             customSection.style.display = 'block';
-            // Make custom rate inputs required
-            document.querySelectorAll('#customRates input').forEach(input => input.required = true);
-            document.querySelectorAll('#wcfsRates input').forEach(input => input.required = false);
+            createStateRateInputs('custom');
         }
+    }
+
+    function getProviderStates(providerId) {
+        console.log('Fetching states for provider:', providerId);  // Debug log
+        // Fetch provider data to get the states
+        return fetch(`/providers/api/providers/${providerId}`)
+            .then(response => {
+                console.log('API Response status:', response.status);  // Debug log
+                if (!response.ok) {
+                    throw new Error('Failed to fetch provider data');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('API Response data:', data);  // Debug log
+                if (!data.states_in_contract) {
+                    console.error('No states found in provider data');
+                    return ['CA']; // Default to California if no states specified
+                }
+                const states = data.states_in_contract.split(',').map(state => state.trim());
+                console.log('Parsed states:', states);  // Debug log
+                if (states.length === 0) {
+                    console.error('States array is empty');
+                    return ['CA']; // Default to California if no states specified
+                }
+                return states;
+            })
+            .catch(error => {
+                console.error('Error fetching provider states:', error);
+                return ['CA']; // Fallback to California on error
+            });
+    }
+
+    function createStateRateInputs(rateType) {
+        // Get provider ID from the form action, but handle the URL properly
+        const formAction = document.getElementById('customRatesForm').action;
+        const providerId = formAction.split('/providers/')[1].split('/')[0];
+        console.log('Creating rate inputs for provider:', providerId);
+        
+        const container = document.getElementById(rateType === 'wcfs' ? 'wcfsStateRates' : 'customStateRates');
+        container.innerHTML = '';
+
+        // Show loading state
+        container.innerHTML = '<p>Loading states...</p>';
+
+        // Get states and create inputs
+        getProviderStates(providerId)
+            .then(states => {
+                console.log('Received states for rate inputs:', states);
+                container.innerHTML = ''; // Clear loading state
+                if (!states || states.length === 0) {
+                    container.innerHTML = '<p class="error">No states found for this provider</p>';
+                    return;
+                }
+                states.forEach(state => {
+                    console.log('Creating rate table for state:', state);
+                    const table = document.createElement('table');
+                    table.className = 'state-rate-table';
+                    table.innerHTML = `
+                        <tr>
+                            <th colspan="2">${state}</th>
+                        </tr>
+                        <tr>
+                            <th>Category</th>
+                            <th>${rateType === 'wcfs' ? 'WCFS %' : 'Rate ($)'}</th>
+                        </tr>
+                        <tr>
+                            <td>MRI w/o</td>
+                            <td><input type="number" name="${rateType}_${state}_mri_without" min="0" ${rateType === 'wcfs' ? 'max="100" step="0.1"' : 'step="0.01"'}></td>
+                        </tr>
+                        <tr>
+                            <td>MRI w/</td>
+                            <td><input type="number" name="${rateType}_${state}_mri_with" min="0" ${rateType === 'wcfs' ? 'max="100" step="0.1"' : 'step="0.01"'}></td>
+                        </tr>
+                        <tr>
+                            <td>MRI w/ & w/o</td>
+                            <td><input type="number" name="${rateType}_${state}_mri_both" min="0" ${rateType === 'wcfs' ? 'max="100" step="0.1"' : 'step="0.01"'}></td>
+                        </tr>
+                        <tr>
+                            <td>CT w/o</td>
+                            <td><input type="number" name="${rateType}_${state}_ct_without" min="0" ${rateType === 'wcfs' ? 'max="100" step="0.1"' : 'step="0.01"'}></td>
+                        </tr>
+                        <tr>
+                            <td>CT w/</td>
+                            <td><input type="number" name="${rateType}_${state}_ct_with" min="0" ${rateType === 'wcfs' ? 'max="100" step="0.1"' : 'step="0.01"'}></td>
+                        </tr>
+                        <tr>
+                            <td>CT w/ & w/o</td>
+                            <td><input type="number" name="${rateType}_${state}_ct_both" min="0" ${rateType === 'wcfs' ? 'max="100" step="0.1"' : 'step="0.01"'}></td>
+                        </tr>
+                        <tr>
+                            <td>X-Ray</td>
+                            <td><input type="number" name="${rateType}_${state}_xray" min="0" ${rateType === 'wcfs' ? 'max="100" step="0.1"' : 'step="0.01"'}></td>
+                        </tr>
+                        <tr>
+                            <td>Arthrogram</td>
+                            <td><input type="number" name="${rateType}_${state}_arthrogram" min="0" ${rateType === 'wcfs' ? 'max="100" step="0.1"' : 'step="0.01"'}></td>
+                        </tr>
+                    `;
+                    container.appendChild(table);
+                });
+            })
+            .catch(error => {
+                console.error('Error creating state rate inputs:', error);
+                container.innerHTML = '<p class="error">Error loading states. Please try again.</p>';
+            });
+    }
+
+    function applyToAllStates(rateType) {
+        const providerId = document.getElementById('customRatesForm').action.split('/')[2];
+        getProviderStates(providerId)
+            .then(states => {
+                const firstState = states[0];
+                
+                // Get all input fields for the first state
+                const firstStateInputs = document.querySelectorAll(`input[name^="${rateType}_${firstState}_"]`);
+                
+                // For each input in the first state, copy its value to all other states
+                firstStateInputs.forEach(input => {
+                    const category = input.name.split('_').slice(2).join('_');
+                    const value = input.value;
+                    
+                    // Apply to all other states
+                    states.slice(1).forEach(state => {
+                        const targetInput = document.querySelector(`input[name="${rateType}_${state}_${category}"]`);
+                        if (targetInput) {
+                            targetInput.value = value;
+                        }
+                    });
+                });
+            });
     }
 
     function openEmailModal(providerId) {

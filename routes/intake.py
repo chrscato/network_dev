@@ -24,29 +24,35 @@ def generate_contract_route(provider_id):
         wcfs_percentages = None
 
         if rate_type == 'custom':
-            # Get custom dollar amounts
-            custom_rates = {
-                'mri_without': float(request.form['mri_without_rate']),
-                'mri_with': float(request.form['mri_with_rate']),
-                'mri_both': float(request.form['mri_both_rate']),
-                'ct_without': float(request.form['ct_without_rate']),
-                'ct_with': float(request.form['ct_with_rate']),
-                'ct_both': float(request.form['ct_both_rate']),
-                'xray': float(request.form['xray_rate']),
-                'arthrogram': float(request.form['arthrogram_rate'])
-            }
+            # Get custom dollar amounts for each state
+            custom_rates = {}
+            states = [s.strip() for s in provider.states_in_contract.split(",") if s.strip()]
+            for state in states:
+                custom_rates[state] = {
+                    'mri_without': float(request.form.get(f'custom_{state}_mri_without', 0)),
+                    'mri_with': float(request.form.get(f'custom_{state}_mri_with', 0)),
+                    'mri_both': float(request.form.get(f'custom_{state}_mri_both', 0)),
+                    'ct_without': float(request.form.get(f'custom_{state}_ct_without', 0)),
+                    'ct_with': float(request.form.get(f'custom_{state}_ct_with', 0)),
+                    'ct_both': float(request.form.get(f'custom_{state}_ct_both', 0)),
+                    'xray': float(request.form.get(f'custom_{state}_xray', 0)),
+                    'arthrogram': float(request.form.get(f'custom_{state}_arthrogram', 0))
+                }
         elif rate_type == 'wcfs':
-            # Get WCFS percentages
-            wcfs_percentages = {
-                'mri_without': float(request.form['mri_without_wcfs']),
-                'mri_with': float(request.form['mri_with_wcfs']),
-                'mri_both': float(request.form['mri_both_wcfs']),
-                'ct_without': float(request.form['ct_without_wcfs']),
-                'ct_with': float(request.form['ct_with_wcfs']),
-                'ct_both': float(request.form['ct_both_wcfs']),
-                'xray': float(request.form['xray_wcfs']),
-                'arthrogram': float(request.form['arthrogram_wcfs'])
-            }
+            # Get WCFS percentages for each state
+            wcfs_percentages = {}
+            states = [s.strip() for s in provider.states_in_contract.split(",") if s.strip()]
+            for state in states:
+                wcfs_percentages[state] = {
+                    'mri_without': float(request.form.get(f'wcfs_{state}_mri_without', 0)),
+                    'mri_with': float(request.form.get(f'wcfs_{state}_mri_with', 0)),
+                    'mri_both': float(request.form.get(f'wcfs_{state}_mri_both', 0)),
+                    'ct_without': float(request.form.get(f'wcfs_{state}_ct_without', 0)),
+                    'ct_with': float(request.form.get(f'wcfs_{state}_ct_with', 0)),
+                    'ct_both': float(request.form.get(f'wcfs_{state}_ct_both', 0)),
+                    'xray': float(request.form.get(f'wcfs_{state}_xray', 0)),
+                    'arthrogram': float(request.form.get(f'wcfs_{state}_arthrogram', 0))
+                }
         # For 'standard' rate type, we'll use the provider's default rates
 
         # Create filename using DBA name or provider name if DBA is not available
