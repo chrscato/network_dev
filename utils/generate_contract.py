@@ -283,10 +283,11 @@ def generate_contract(provider_id, method='standard', custom_rates=None, wcfs_pe
     # Save the modified copy
     doc.save(docx_path)
 
-    # Convert to PDF (optional)
+    # Convert to PDF using LibreOffice
     try:
-        from docx2pdf import convert
-        convert(docx_path, pdf_path)
+        import subprocess
+        subprocess.run(['soffice', '--headless', '--convert-to', 'pdf', '--outdir', output_folder, docx_path], check=True)
+        pdf_path = os.path.join(output_folder, f"{filename}.pdf")
     except Exception as e:
         print(f"[WARN] PDF conversion failed: {e}")
 

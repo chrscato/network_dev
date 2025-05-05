@@ -1,0 +1,16 @@
+[Unit]
+Description=Network Development Portal
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/opt/network_dev
+Environment=PATH=/opt/network_dev/venv/bin
+Environment=FLASK_APP=app.py
+Environment=FLASK_ENV=production
+ExecStart=/opt/network_dev/venv/bin/python -m flask run --host=0.0.0.0
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target 
