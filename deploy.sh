@@ -34,17 +34,22 @@ git push origin master
 
 # Deploy to server
 print_status "Deploying to server..."
-ssh $REMOTE_HOST << EOF
+ssh $REMOTE_HOST << 'EOF'
     # Create directory if it doesn't exist
-    mkdir -p $REMOTE_DIR
+    mkdir -p /opt/network_dev
 
     # Pull latest changes
-    cd $REMOTE_DIR
+    cd /opt/network_dev
     if [ -d .git ]; then
         git pull origin master
     else
-        git clone https://github.com/your-username/network_dev.git .
+        # Use SSH URL instead of HTTPS
+        git clone git@github.com:chrscato/network_dev.git .
     fi
+
+    # Install system dependencies
+    apt-get update
+    apt-get install -y python3-venv python3-pip
 
     # Create virtual environment if it doesn't exist
     if [ ! -d "venv" ]; then
@@ -53,25 +58,53 @@ ssh $REMOTE_HOST << EOF
 
     # Activate virtual environment and install dependencies
     source venv/bin/activate
-    pip install -r requirements.txt
+    pip install flask flask-sqlalchemy flask-migrate python-dotenv
 
-    # Copy environment file if it doesn't exist
+    # Create .env file if it doesn't exist
     if [ ! -f .env ]; then
-        cp .env.example .env
+        cat > .env << 'EOL'
+FLASK_APP=app.py
+FLASK_ENV=production
+DATABASE_URL=sqlite:///network_dev.db
+SECRET_KEY=your-secret-key-here
+EOL
     fi
 
-    # Run database migrations
-    flask db upgrade
-
-    # Restart the application service if it exists
-    if systemctl is-active --quiet network_dev; then
-        systemctl restart network_dev
+    # Run database migrations if flask-migrate is installed
+    if command -v flask &> /dev/null; then
+        export FLASK_APP=app.py
+        flask db upgrade
     fi
+
+    # Create systemd service if it doesn't exist
+    if [ ! -f /etc/systemd/system/network_dev.service ]; then
+        cat > /etc/systemd/system/network_dev.service << 'EOL'
+[Unit]
+Description=Network Development Portal
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/opt/network_dev
+Environment="PATH=/opt/network_dev/venv/bin"
+ExecStart=/opt/network_dev/venv/bin/python app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOL
+        systemctl daemon-reload
+        systemctl enable network_dev
+    fi
+
+    # Restart the application service
+    systemctl restart network_dev
 EOF
 
 # Check if the deployment was successful
 if [ $? -eq 0 ]; then
     print_status "✅ Deployment complete!"
+    print_status "Application is running at: http://159.223.104.254:5000"
 else
     print_error "Deployment failed!"
     exit 1
