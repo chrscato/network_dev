@@ -38,13 +38,25 @@ ssh $REMOTE_HOST << 'EOF'
     # Create directory if it doesn't exist
     mkdir -p /opt/network_dev
 
-    # Pull latest changes
-    cd /opt/network_dev
-    if [ -d .git ]; then
-        git pull origin master
+    # Backup existing .env if it exists
+    if [ -f /opt/network_dev/.env ]; then
+        cp /opt/network_dev/.env /opt/network_dev/.env.backup
+    fi
+
+    # If directory exists, remove it
+    if [ -d /opt/network_dev/.git ]; then
+        cd /opt/network_dev
+        git fetch origin
+        git reset --hard origin/master
     else
-        # Use SSH URL instead of HTTPS
-        git clone git@github.com:chrscato/network_dev.git .
+        # Fresh clone
+        rm -rf /opt/network_dev/*
+        git clone git@github.com:chrscato/network_dev.git /opt/network_dev
+    fi
+
+    # Restore .env if it was backed up
+    if [ -f /opt/network_dev/.env.backup ]; then
+        mv /opt/network_dev/.env.backup /opt/network_dev/.env
     fi
 
     # Install system dependencies
@@ -87,7 +99,9 @@ After=network.target
 User=root
 WorkingDirectory=/opt/network_dev
 Environment="PATH=/opt/network_dev/venv/bin"
-ExecStart=/opt/network_dev/venv/bin/python app.py
+Environment="FLASK_APP=app.py"
+Environment="FLASK_ENV=production"
+ExecStart=/opt/network_dev/venv/bin/python -m flask run --host=0.0.0.0
 Restart=always
 
 [Install]
@@ -99,6 +113,7 @@ EOL
 
     # Restart the application service
     systemctl restart network_dev
+    systemctl status network_dev
 EOF
 
 # Check if the deployment was successful
