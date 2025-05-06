@@ -5,10 +5,15 @@ from email.mime.application import MIMEApplication
 from flask import current_app
 import os
 import logging
+import socket
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 def send_email(to_email, subject, body, attachments=None):
     """
-    Send an email with optional attachments.
+    Send an email with optional attachments using SendGrid.
     
     Args:
         to_email (str): Recipient email address
@@ -22,7 +27,9 @@ def send_email(to_email, subject, body, attachments=None):
         smtp_port = current_app.config['SMTP_PORT']
         smtp_username = current_app.config['SMTP_USERNAME']
         smtp_password = current_app.config['SMTP_PASSWORD']
-        from_email = current_app.config['SMTP_USERNAME']
+        from_email = "automate.cdx@gmail.com"  # Your verified sender email
+        
+        logger.debug(f"SMTP Configuration - Server: {smtp_server}, Port: {smtp_port}, Username: {smtp_username}")
         
         if not all([smtp_server, smtp_port, smtp_username, smtp_password]):
             raise ValueError("SMTP configuration is incomplete")
@@ -41,26 +48,46 @@ def send_email(to_email, subject, body, attachments=None):
             for attachment in attachments:
                 try:
                     file_path = os.path.join(current_app.root_path, attachment['path'])
+                    logger.debug(f"Attempting to attach file: {file_path}")
                     with open(file_path, 'rb') as f:
                         part = MIMEApplication(f.read(), Name=attachment['filename'])
                     part['Content-Disposition'] = f'attachment; filename="{attachment["filename"]}"'
                     msg.attach(part)
-                    logging.info(f"Successfully attached {attachment['filename']}")
+                    logger.info(f"Successfully attached {attachment['filename']}")
                 except Exception as e:
-                    logging.error(f"Error attaching {attachment['filename']}: {str(e)}")
+                    logger.error(f"Error attaching {attachment['filename']}: {str(e)}")
                     continue
         
         # Connect to SMTP server and send email
-        logging.info(f"Connecting to SMTP server: {smtp_server}:{smtp_port}")
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
+        logger.info(f"Connecting to SMTP server: {smtp_server}:{smtp_port}")
+        try:
+            server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
+            logger.debug("SMTP connection established")
+            
+            server.set_debuglevel(1)  # Enable debug output
             server.starttls()
-            logging.info("Starting TLS connection")
+            logger.debug("TLS started")
+            
             server.login(smtp_username, smtp_password)
-            logging.info("Successfully logged in to SMTP server")
+            logger.debug("SMTP login successful")
+            
             server.send_message(msg)
-            logging.info(f"Email sent successfully to {to_email}")
+            logger.info(f"Email sent successfully to {to_email}")
+            
+            server.quit()
+            logger.debug("SMTP connection closed")
+            
+        except socket.timeout:
+            logger.error("SMTP connection timed out")
+            raise
+        except smtplib.SMTPAuthenticationError:
+            logger.error("SMTP authentication failed")
+            raise
+        except smtplib.SMTPException as e:
+            logger.error(f"SMTP error occurred: {str(e)}")
+            raise
         
         return True
     except Exception as e:
-        logging.error(f"Error sending email: {str(e)}")
+        logger.error(f"Error sending email: {str(e)}", exc_info=True)
         raise
