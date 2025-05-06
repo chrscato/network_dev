@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
 
 class Config:
@@ -12,4 +13,7 @@ class Config:
     SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
     SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
     SMTP_USERNAME = os.getenv("GMAIL_USER")
-    SMTP_PASSWORD = os.getenv("GMAIL_PASS") 
+    SMTP_PASSWORD = os.getenv("GMAIL_PASS")
+    
+    # Email Configuration
+    CDX_EMAIL = os.getenv("CDX_EMAIL") 
