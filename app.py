@@ -10,6 +10,7 @@ from routes.intake import intake_bp
 # In app.py, add this import
 from routes.test_api import test_api_bp
 from routes.email import email_bp
+import argparse
 
 
 
@@ -30,8 +31,9 @@ app.register_blueprint(email_bp)
 def home():
     return render_template("index.html")
 
-# Make sure your app is running on all interfaces
-if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-    app.run(host='127.0.0.1', port=5000, debug=True)  # Using localhost
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--host', default='127.0.0.1')
+    parser.add_argument('--port', type=int, default=5000)
+    args = parser.parse_args()
+    app.run(host=args.host, port=args.port, debug=True)
