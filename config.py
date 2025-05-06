@@ -16,4 +16,4 @@ class Config:
     SMTP_PASSWORD = os.getenv("SENDGRID_API_KEY")  # Get from environment variable
     
     # Email Configuration
-    CDX_EMAIL = os.getenv("CDX_EMAIL") 
+    CDX_EMAIL = os.getenv("CDX_EMAIL", "christopher.cato@clarity-dx.com")  # Added default value 
