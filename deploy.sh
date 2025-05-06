@@ -33,9 +33,13 @@ create_backup() {
         fi"
 }
 
-# Run all deployment steps
+# Run the commit script to handle any uncommitted changes
 ./commit.sh
+
+# Run the pull script to update the repository on the server
 ./pull.sh
+
+# Run the sync script to copy files to the server
 ./sync.sh
 
 echo "✅ Deployment complete!" 
