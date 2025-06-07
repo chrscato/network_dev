@@ -1,89 +1,183 @@
 {% extends "base.html" %}
 
-{% block title %}Outreach Log{% endblock %}
-
-{% block heading %}Outreach Log{% endblock %}
-
-{% block additional_styles %}
-<style>
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-    }
-    th, td {
-        padding: 10px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
-    }
-    th {
-        background-color: #f2f2f2;
-    }
-    .action-buttons {
-        display: flex;
-        gap: 10px;
-    }
-    .action-buttons a {
-        padding: 5px 10px;
-        background-color: #4CAF50;
-        color: white;
-        text-decoration: none;
-        border-radius: 4px;
-    }
-    .action-buttons button {
-        padding: 5px 10px;
-        background-color: #f44336;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-    .action-buttons a:hover {
-        background-color: #45a049;
-    }
-    .action-buttons button:hover {
-        background-color: #da190b;
-    }
-    .new-outreach {
-        display: inline-block;
-        padding: 10px 15px;
-        background-color: #4CAF50;
-        color: white;
-        text-decoration: none;
-        border-radius: 4px;
-        margin-bottom: 20px;
-    }
-    .new-outreach:hover {
-        background-color: #45a049;
-    }
-</style>
-{% endblock %}
+{% block title %}Outreach Activities{% endblock %}
 
 {% block content %}
-<a href="{{ url_for('outreach.create_outreach') }}" class="new-outreach">New Outreach</a>
-<table>
-    <tr>
-        <th>Provider</th>
-        <th>Contact</th>
-        <th>Method</th>
-        <th>Status</th>
-        <th>Notes</th>
-        <th>Actions</th>
-    </tr>
-    {% for o in outreach %}
-    <tr>
-        <td>{{ o.provider.name }}</td>
-        <td>{{ o.contact.name if o.contact else 'N/A' }}</td>
-        <td>{{ o.method }}</td>
-        <td>{{ o.status }}</td>
-        <td>{{ o.notes }}</td>
-        <td class="action-buttons">
-            <a href="{{ url_for('outreach.edit_outreach', outreach_id=o.id) }}">Edit</a>
-            <form method="POST" action="{{ url_for('outreach.delete_outreach', outreach_id=o.id) }}" style="display:inline;">
-                <button type="submit" onclick="return confirm('Delete outreach record?')">Delete</button>
-            </form>
-        </td>
-    </tr>
-    {% endfor %}
-</table>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h1>Outreach Activities</h1>
+            
+            <!-- Quick Stats Bar -->
+            <div class="alert alert-info mb-4">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>Total Outreach:</strong> {{ outreach|length }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>With Replies:</strong> 
+                        {{ outreach|selectattr('reply_received')|list|length }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Unread Replies:</strong> 
+                        <span class="badge bg-danger">
+                            {{ outreach|selectattr('reply_status', 'equalto', 'unread')|list|length }}
+                        </span>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('outreach.check_replies_now') }}" class="btn btn-primary btn-sm">
+                            🔄 Check for Replies
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <a href="{{ url_for('outreach.create_outreach') }}" class="btn btn-primary mb-3">Add New Outreach</a>
+            
+            {% if outreach %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Provider</th>
+                            <th>Contact</th>
+                            <th>Method</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Reply Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in outreach %}
+                        <tr class="outreach-row {% if item.reply_status == 'unread' %}has-unread-reply{% endif %}">
+                            <td>
+                                <strong>{{ item.provider.name if item.provider else 'N/A' }}</strong>
+                                {% if item.provider and item.provider.dba_name %}
+                                <br><small class="text-muted">{{ item.provider.dba_name }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.contact %}
+                                {{ item.contact.name }}<br>
+                                <small class="text-muted">{{ item.contact.email }}</small>
+                                {% else %}
+                                <span class="text-muted">No contact</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ item.method or 'N/A' }}</span>
+                                {% if item.type %}
+                                <br><small class="text-muted">{{ item.type }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ item.created_at.strftime('%Y-%m-%d') if item.created_at else 'N/A' }}
+                                <br><small class="text-muted">{{ item.created_at.strftime('%H:%M') if item.created_at else '' }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ item.status or 'pending' }}</span>
+                            </td>
+                            <td>
+                                <!-- Reply Status Indicator -->
+                                <div class="reply-status-container">
+                                    {% if item.reply_received %}
+                                        <div class="reply-preview-tooltip">
+                                            <span class="reply-indicator {{ item.get_reply_indicator_class() }}">
+                                                {{ item.get_reply_status_text() }}
+                                                {% if item.reply_count > 1 %}
+                                                <span class="reply-count-badge">{{ item.reply_count }}</span>
+                                                {% endif %}
+                                            </span>
+                                            
+                                            {% if item.reply_preview %}
+                                            <div class="tooltip-content">
+                                                <strong>From:</strong> {{ item.reply_sender_email }}<br>
+                                                <strong>Date:</strong> {{ item.last_reply_date.strftime('%Y-%m-%d %H:%M') if item.last_reply_date else 'Unknown' }}<br>
+                                                <strong>Preview:</strong><br>
+                                                {{ item.reply_preview }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Quick Action Buttons for Replies -->
+                                        <div class="mt-1">
+                                            {% if item.reply_status == 'unread' %}
+                                            <button class="btn btn-sm btn-outline-primary mark-read-btn" data-outreach-id="{{ item.id }}">
+                                                Mark Read
+                                            </button>
+                                            {% endif %}
+                                            {% if item.reply_status in ['unread', 'read'] %}
+                                            <button class="btn btn-sm btn-outline-success mark-responded-btn" data-outreach-id="{{ item.id }}">
+                                                Mark Responded
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="reply-indicator no-reply">No Reply</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('outreach.edit_outreach', outreach_id=item.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                <form method="post" action="{{ url_for('outreach.delete_outreach', outreach_id=item.id) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure?')">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <p>No outreach activities found. <a href="{{ url_for('outreach.create_outreach') }}">Create the first one</a>.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for quick actions -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mark as read functionality
+    document.querySelectorAll('.mark-read-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const outreachId = this.dataset.outreachId;
+            fetch(`/outreach/${outreachId}/mark-read`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); // Refresh to show updated status
+                }
+            });
+        });
+    });
+    
+    // Mark as responded functionality
+    document.querySelectorAll('.mark-responded-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const outreachId = this.dataset.outreachId;
+            fetch(`/outreach/${outreachId}/mark-responded`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); // Refresh to show updated status
+                }
+            });
+        });
+    });
+});
+</script>
 {% endblock %} 

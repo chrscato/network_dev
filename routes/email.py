@@ -83,7 +83,7 @@ def send_provider_email():
             attachments = []
         
         # Send email to configured address or the contact's email
-        recipient = current_app.config.get('CDX_EMAIL') or contacts[0].email
+        recipient = contacts[0].email
         logger.debug(f"Recipient email: {recipient}")
         
         if not recipient:

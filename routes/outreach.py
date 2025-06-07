@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import db
 from models.outreach import Outreach
 from models.provider import Provider
@@ -115,47 +115,42 @@ def analytics():
     
     return render_template("outreach/analytics.html", analytics=analytics_data)
 
-@outreach_bp.route("/check-replies", methods=["POST"])
+@outreach_bp.route("/check-replies", methods=["GET", "POST"])
 def check_replies_now():
     """Manually trigger reply checking via web interface."""
-    import json
-    from utils.check_replies import check_all_recent_outreach
-    
     try:
-        # Capture the output by redirecting it
-        import io
-        import contextlib
+        # Import here to avoid circular imports
+        from utils.check_replies import check_all_recent_outreach
         
-        # Create a string buffer to capture print statements
-        output_buffer = io.StringIO()
+        # Run the reply checker
+        replies_found = check_all_recent_outreach(days_back=7)
         
-        with contextlib.redirect_stdout(output_buffer):
-            # Run the reply checker
-            from app import app
-            with app.app_context():
-                check_all_recent_outreach(days_back=7)
-        
-        # Get the captured output
-        output = output_buffer.getvalue()
-        
-        # Parse results (basic parsing of the output)
-        lines = output.split('\n')
-        checking_line = [line for line in lines if 'Checking' in line and 'outreach records' in line]
-        total_line = [line for line in lines if 'Total replies found:' in line]
-        
-        if checking_line:
-            records_checked = checking_line[0].split()[1] if len(checking_line[0].split()) > 1 else '0'
+        if replies_found > 0:
+            flash(f"✅ Reply check completed! Found {replies_found} new replies.")
         else:
-            records_checked = '0'
-            
-        if total_line:
-            replies_found = total_line[0].split()[-1] if total_line else '0'
-        else:
-            replies_found = '0'
-        
-        flash(f"Reply check completed! Checked {records_checked} records, found {replies_found} replies.")
+            flash("📭 Reply check completed. No new replies found.")
         
     except Exception as e:
-        flash(f"Error checking replies: {str(e)}")
+        flash(f"❌ Error checking replies: {str(e)}")
     
-    return redirect(url_for("outreach.analytics")) 
+    return redirect(url_for("outreach.list_outreach"))
+
+@outreach_bp.route("/<outreach_id>/mark-read", methods=["POST"])
+def mark_reply_read(outreach_id):
+    """Mark a reply as read."""
+    try:
+        outreach = Outreach.query.get_or_404(outreach_id)
+        outreach.mark_reply_read()
+        return jsonify({"success": True, "message": "Reply marked as read"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@outreach_bp.route("/<outreach_id>/mark-responded", methods=["POST"])
+def mark_reply_responded(outreach_id):
+    """Mark a reply as responded to."""
+    try:
+        outreach = Outreach.query.get_or_404(outreach_id)
+        outreach.mark_reply_responded()
+        return jsonify({"success": True, "message": "Reply marked as responded"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500 
