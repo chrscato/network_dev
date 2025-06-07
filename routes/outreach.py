@@ -61,4 +61,101 @@ def run_jobs():
 
 @outreach_bp.route("/monitoring")
 def monitoring():
-    return render_template("outreach/monitoring.html") 
+    return render_template("outreach/monitoring.html")
+
+@outreach_bp.route("/analytics")
+def analytics():
+    """Show outreach analytics and reply tracking."""
+    from datetime import datetime, timedelta
+    from sqlalchemy import func
+    
+    # Get date range (last 30 days)
+    end_date = datetime.utcnow()
+    start_date = end_date - timedelta(days=30)
+    
+    # Basic metrics
+    total_outreach = Outreach.query.filter(
+        Outreach.created_at >= start_date,
+        Outreach.method == 'email'
+    ).count()
+    
+    outreach_with_tracking = Outreach.query.filter(
+        Outreach.created_at >= start_date,
+        Outreach.method == 'email',
+        Outreach.conversation_id.isnot(None)
+    ).count()
+    
+    # Get all tracked outreach for reply analysis
+    tracked_outreach = Outreach.query.filter(
+        Outreach.created_at >= start_date,
+        Outreach.method == 'email',
+        Outreach.conversation_id.isnot(None)
+    ).all()
+    
+    # Count replies (basic check - you can enhance this)
+    replies_found = sum(1 for o in tracked_outreach if 'Reply received:' in (o.notes or ''))
+    
+    # Calculate response rate
+    response_rate = (replies_found / outreach_with_tracking * 100) if outreach_with_tracking > 0 else 0
+    
+    # Recent outreach with tracking info
+    recent_outreach = Outreach.query.filter(
+        Outreach.created_at >= start_date,
+        Outreach.method == 'email'
+    ).order_by(Outreach.created_at.desc()).limit(20).all()
+    
+    analytics_data = {
+        'total_outreach': total_outreach,
+        'outreach_with_tracking': outreach_with_tracking,
+        'replies_found': replies_found,
+        'response_rate': round(response_rate, 1),
+        'recent_outreach': recent_outreach,
+        'date_range': f"{start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
+    }
+    
+    return render_template("outreach/analytics.html", analytics=analytics_data)
+
+@outreach_bp.route("/check-replies", methods=["POST"])
+def check_replies_now():
+    """Manually trigger reply checking via web interface."""
+    import json
+    from utils.check_replies import check_all_recent_outreach
+    
+    try:
+        # Capture the output by redirecting it
+        import io
+        import contextlib
+        
+        # Create a string buffer to capture print statements
+        output_buffer = io.StringIO()
+        
+        with contextlib.redirect_stdout(output_buffer):
+            # Run the reply checker
+            from app import app
+            with app.app_context():
+                check_all_recent_outreach(days_back=7)
+        
+        # Get the captured output
+        output = output_buffer.getvalue()
+        
+        # Parse results (basic parsing of the output)
+        lines = output.split('\n')
+        checking_line = [line for line in lines if 'Checking' in line and 'outreach records' in line]
+        total_line = [line for line in lines if 'Total replies found:' in line]
+        
+        if checking_line:
+            records_checked = checking_line[0].split()[1] if len(checking_line[0].split()) > 1 else '0'
+        else:
+            records_checked = '0'
+            
+        if total_line:
+            replies_found = total_line[0].split()[-1] if total_line else '0'
+        else:
+            replies_found = '0'
+        
+        flash(f"Reply check completed! Checked {records_checked} records, found {replies_found} replies.")
+        
+    except Exception as e:
+        flash(f"Error checking replies: {str(e)}")
+    
+    return redirect(url_for("outreach.analytics")) 

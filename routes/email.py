@@ -135,7 +135,7 @@ def send_provider_email():
             # Update provider status
             provider.status = 'outreach'
             
-            # Create outreach record
+            # Create outreach record with tracking info
             outreach = Outreach(
                 id=str(uuid.uuid4()),
                 provider_id=provider_id,
@@ -143,11 +143,18 @@ def send_provider_email():
                 method='email',
                 type='cold',
                 notes=f'Sent {template_name} email to {recipient}',
-                status='completed'
+                status='sent'
             )
-            db.session.add(outreach)
             
-            # Commit all changes
+            # Add tracking information if available
+            if result.get('message_id') and result.get('conversation_id'):
+                outreach.update_email_tracking(
+                    message_id=result['message_id'],
+                    conversation_id=result['conversation_id']
+                )
+                logger.info(f"Stored tracking info - Message ID: {result['message_id']}, Conversation ID: {result['conversation_id']}")
+            
+            db.session.add(outreach)
             db.session.commit()
             
             success_msg = f'Email sent successfully to {recipient}'
@@ -155,8 +162,9 @@ def send_provider_email():
                 return jsonify({
                     'message': success_msg,
                     'provider_id': provider_id,
-                    'status': provider.status,
-                    'outreach_id': outreach.id
+                    'outreach_id': outreach.id,
+                    'message_id': result.get('message_id'),
+                    'conversation_id': result.get('conversation_id')
                 })
             else:
                 flash(success_msg)

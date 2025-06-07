@@ -157,7 +157,7 @@ def send_email(subject, body, recipient, importance="normal", cc=None, bcc=None,
 
 def send_email_with_file_attachments(subject, body, recipient, file_paths=None, **kwargs):
     """
-    Send an email with file attachments.
+    Send an email with file attachments and return tracking information.
     
     Args:
         subject (str): Email subject
@@ -167,38 +167,85 @@ def send_email_with_file_attachments(subject, body, recipient, file_paths=None, 
         **kwargs: Additional arguments to pass to send_email
     
     Returns:
-        dict: Response from the send_email function
+        dict: Response containing status and tracking information (message_id, conversation_id)
     """
     import base64
     import mimetypes
     import os
     
-    attachments = []
-    
-    if file_paths:
-        for file_path in file_paths:
-            if os.path.exists(file_path):
-                # Get file name and content type
-                file_name = os.path.basename(file_path)
-                content_type, _ = mimetypes.guess_type(file_path)
-                
-                if content_type is None:
-                    # Default to binary if content type can't be determined
-                    content_type = 'application/octet-stream'
-                
-                # Read and encode the file
-                with open(file_path, 'rb') as file:
-                    content = base64.b64encode(file.read()).decode('utf-8')
-                
-                # Add to attachments list
-                attachments.append({
-                    'name': file_name,
-                    'content_type': content_type,
-                    'content': content
-                })
-    
-    # Send email with attachments
-    return send_email(subject, body, recipient, attachments=attachments, **kwargs)
+    try:
+        access_token = get_access_token()
+        
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Prepare recipients
+        to_recipients = [{"emailAddress": {"address": recipient}}]
+        
+        # Check if body is HTML
+        is_html = "<html" in body.lower() or "<body" in body.lower()
+        content_type = "html" if is_html else "text"
+        
+        # Build email message
+        email_message = {
+            "subject": subject,
+            "body": {
+                "contentType": content_type,
+                "content": body
+            },
+            "toRecipients": to_recipients
+        }
+        
+        # Add attachments if provided
+        if file_paths:
+            email_message["attachments"] = []
+            for file_path in file_paths:
+                if os.path.exists(file_path):
+                    file_name = os.path.basename(file_path)
+                    content_type, _ = mimetypes.guess_type(file_path)
+                    
+                    if content_type is None:
+                        content_type = 'application/octet-stream'
+                    
+                    with open(file_path, 'rb') as file:
+                        content = base64.b64encode(file.read()).decode('utf-8')
+                    
+                    email_message["attachments"].append({
+                        "@odata.type": "#microsoft.graph.fileAttachment",
+                        "name": file_name,
+                        "contentType": content_type,
+                        "contentBytes": content
+                    })
+        
+        # Step 1: Create the message in drafts to get tracking info
+        create_endpoint = f"https://graph.microsoft.com/v1.0/users/{user_email}/messages"
+        create_response = requests.post(create_endpoint, headers=headers, data=json.dumps(email_message))
+        
+        if create_response.status_code == 201:
+            message_data = create_response.json()
+            message_id = message_data.get('id')
+            conversation_id = message_data.get('conversationId')
+            
+            # Step 2: Send the message
+            send_endpoint = f"https://graph.microsoft.com/v1.0/users/{user_email}/messages/{message_id}/send"
+            send_response = requests.post(send_endpoint, headers=headers)
+            
+            if send_response.status_code == 202:
+                return {
+                    "status": "success",
+                    "message": "Email sent successfully",
+                    "message_id": message_id,
+                    "conversation_id": conversation_id
+                }
+            else:
+                return {"status": "error", "message": f"Failed to send: {send_response.reason}"}
+        else:
+            return {"status": "error", "message": f"Failed to create message: {create_response.reason}"}
+            
+    except Exception as e:
+        return {"status": "error", "message": f"Exception: {str(e)}"}
 
 # Example usage
 if __name__ == "__main__":
