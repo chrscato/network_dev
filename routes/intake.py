@@ -1,7 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify
+from flask_login import login_required
 from models import db
 from models.provider import Provider
 from models.contact import Contact
+from models.intake import Intake
 import uuid
 import os
 import json
@@ -9,14 +11,88 @@ from datetime import datetime
 from utils.generate_contract import generate_contract
 from utils.mailers.contract_mailer import send_contract_email, send_contract_notification
 
-intake_bp = Blueprint("intake", __name__, url_prefix="/providers")
+intake_bp = Blueprint("intake", __name__, url_prefix="/intakes")
 
+@intake_bp.route("/")
+@login_required
+def list_intakes():
+    """List all intakes."""
+    intakes = Intake.query.all()
+    return render_template("intakes/list.html", intakes=intakes)
+
+@intake_bp.route("/new", methods=["GET", "POST"])
+@login_required
+def new_intake():
+    """Create a new intake."""
+    if request.method == "POST":
+        intake = Intake(
+            provider_id=request.form["provider_id"],
+            contact_id=request.form.get("contact_id"),
+            type=request.form["type"],
+            status=request.form["status"],
+            notes=request.form.get("notes")
+        )
+        db.session.add(intake)
+        db.session.commit()
+        flash("Intake created successfully!", "success")
+        return redirect(url_for("intake.list_intakes"))
+    
+    providers = Provider.query.all()
+    contacts = Contact.query.all()
+    return render_template("intakes/new.html", providers=providers, contacts=contacts)
+
+@intake_bp.route("/<intake_id>")
+@login_required
+def view_intake(intake_id):
+    """View a single intake."""
+    intake = Intake.query.get_or_404(intake_id)
+    return render_template("intakes/view.html", intake=intake)
+
+@intake_bp.route("/<intake_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_intake(intake_id):
+    """Edit an existing intake."""
+    intake = Intake.query.get_or_404(intake_id)
+    if request.method == "POST":
+        intake.provider_id = request.form["provider_id"]
+        intake.contact_id = request.form.get("contact_id")
+        intake.type = request.form["type"]
+        intake.status = request.form["status"]
+        intake.notes = request.form.get("notes")
+        db.session.commit()
+        flash("Intake updated successfully!", "success")
+        return redirect(url_for("intake.view_intake", intake_id=intake.id))
+    
+    providers = Provider.query.all()
+    contacts = Contact.query.all()
+    return render_template("intakes/edit.html", intake=intake, providers=providers, contacts=contacts)
+
+@intake_bp.route("/<intake_id>/delete", methods=["POST"])
+@login_required
+def delete_intake(intake_id):
+    """Delete an intake."""
+    intake = Intake.query.get_or_404(intake_id)
+    db.session.delete(intake)
+    db.session.commit()
+    flash("Intake deleted successfully!", "success")
+    return redirect(url_for("intake.list_intakes"))
+
+@intake_bp.route("/api/intakes")
+@login_required
+def api_intakes():
+    """API endpoint to get all intakes."""
+    intakes = Intake.query.all()
+    return jsonify([intake.to_dict() for intake in intakes])
+
+# Contract-related routes
 @intake_bp.route("/<provider_id>/generate_contract", methods=["POST"])
+@login_required
 def generate_contract_route(provider_id):
+    """Generate a contract for a provider."""
     try:
         provider = Provider.query.get(provider_id)
         if not provider:
-            flash("Provider not found")
+            flash("Provider not found", "error")
             return redirect(url_for("provider.list_providers"))
 
         rate_type = request.form.get('rate_type', 'standard')
@@ -26,7 +102,6 @@ def generate_contract_route(provider_id):
         wcfs_percentages = None
 
         if rate_type == 'custom':
-            # Get custom dollar amounts
             custom_rates = {
                 'mri_without': float(request.form['mri_without_rate']),
                 'mri_with': float(request.form['mri_with_rate']),
@@ -38,7 +113,6 @@ def generate_contract_route(provider_id):
                 'arthrogram': float(request.form['arthrogram_rate'])
             }
         elif rate_type == 'wcfs':
-            # Get WCFS percentages
             wcfs_percentages = {
                 'mri_without': float(request.form['mri_without_wcfs']),
                 'mri_with': float(request.form['mri_with_wcfs']),
@@ -49,11 +123,8 @@ def generate_contract_route(provider_id):
                 'xray': float(request.form['xray_wcfs']),
                 'arthrogram': float(request.form['arthrogram_wcfs'])
             }
-        # For 'standard' rate type, we'll use the provider's default rates
 
-        # Create filename using DBA name or provider name if DBA is not available
         filename = f"{provider.dba_name or provider.name}_Agreement"
-        # Replace any characters that might be invalid in filenames
         filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_')).strip()
         
         docx_path, pdf_path = generate_contract(
@@ -63,48 +134,45 @@ def generate_contract_route(provider_id):
             custom_rates=custom_rates
         )
         
-        # Check if files were generated
         if os.path.exists(docx_path):
-            flash(f"Contract generated successfully! DOCX file available.")
-            # Update the provider with the contract file paths
+            flash("Contract generated successfully!", "success")
             provider.contract_docx = docx_path
         else:
-            flash("Error: DOCX file was not generated.")
+            flash("Error: DOCX file was not generated.", "error")
             
         if os.path.exists(pdf_path):
-            flash(f"PDF version available.")
-            # Update the provider with the contract file paths
+            flash("PDF version available.", "success")
             provider.contract_pdf = pdf_path
         else:
-            flash("Note: PDF conversion failed. Only DOCX version is available.")
+            flash("Note: PDF conversion failed. Only DOCX version is available.", "warning")
         
-        # Save the provider to update the contract file paths
         db.session.commit()
         
-        # Send notification email
         try:
             send_contract_notification(provider, docx_path, pdf_path)
-            flash("Notification email sent to admin.")
+            flash("Notification email sent to admin.", "success")
         except Exception as e:
-            flash(f"Note: Could not send notification email: {str(e)}")
+            flash(f"Note: Could not send notification email: {str(e)}", "warning")
             
     except Exception as e:
-        flash(f"Error generating contract: {e}")
+        flash(f"Error generating contract: {e}", "error")
     
     return redirect(url_for("provider.list_providers"))
 
 @intake_bp.route("/<provider_id>/download/<file_type>")
+@login_required
 def download_contract(provider_id, file_type):
+    """Download a contract file."""
     try:
         if file_type not in ['docx', 'pdf']:
-            flash("Invalid file type")
+            flash("Invalid file type", "error")
             return redirect(url_for("provider.list_providers"))
             
         provider = Provider.query.get_or_404(provider_id)
         file_path = provider.contract_docx if file_type == 'docx' else provider.contract_pdf
         
         if not file_path or not os.path.exists(file_path):
-            flash(f"Contract file not found")
+            flash("Contract file not found", "error")
             return redirect(url_for("provider.list_providers"))
             
         return send_file(
@@ -113,30 +181,27 @@ def download_contract(provider_id, file_type):
             download_name=f"{provider.dba_name or provider.name}_Agreement.{file_type}"
         )
     except Exception as e:
-        flash(f"Error downloading file: {e}")
+        flash(f"Error downloading file: {e}", "error")
         return redirect(url_for("provider.list_providers"))
 
 @intake_bp.route("/<provider_id>/email_contract", methods=["POST"])
+@login_required
 def email_contract(provider_id):
-    """Email the contract to a provider contact."""
+    """Email a contract to a provider contact."""
     try:
         provider = Provider.query.get_or_404(provider_id)
         
-        # Get selected contact ID from form
         contact_id = request.form.get('contact_id')
         if not contact_id:
-            flash("No contact selected")
+            flash("No contact selected", "error")
             return redirect(url_for("provider.list_providers"))
         
-        # Get the contact
         contact = Contact.query.get_or_404(contact_id)
         
-        # Check if contract files exist
         if not provider.contract_docx or not os.path.exists(provider.contract_docx):
-            flash("Contract file not found. Please generate the contract first.")
+            flash("Contract file not found. Please generate the contract first.", "error")
             return redirect(url_for("provider.list_providers"))
         
-        # Send email with contract
         result = send_contract_email(
             provider=provider,
             contact=contact,
@@ -145,150 +210,16 @@ def email_contract(provider_id):
         )
         
         if result.get('status') == 'success':
-            # Update provider status to indicate contract was sent
             provider.contract_email_sent = True
             provider.contract_email_sent_at = datetime.utcnow()
             provider.contract_email_sent_to = contact.email
             db.session.commit()
             
-            flash(f"Contract emailed successfully to {contact.name} ({contact.email})")
+            flash(f"Contract emailed successfully to {contact.name} ({contact.email})", "success")
         else:
-            flash(f"Error sending email: {result.get('message')}")
+            flash(f"Error sending email: {result.get('message')}", "error")
         
     except Exception as e:
-        flash(f"Error emailing contract: {str(e)}")
+        flash(f"Error emailing contract: {str(e)}", "error")
     
     return redirect(url_for("provider.list_providers"))
-
-@intake_bp.route("/api/pending_contracts", methods=["GET"])
-def api_pending_contracts():
-    """API endpoint for PowerAutomate to fetch pending contracts."""
-    try:
-        # Find all providers with generated contracts that need processing
-        providers = Provider.query.filter(
-            Provider.contract_docx.isnot(None),  # Contract exists
-            (Provider.contract_email_sent.is_(None) |  # Not sent by email yet
-             Provider.contract_email_sent.is_(False))   
-        ).all()
-        
-        results = []
-        
-        for provider in providers:
-            # Skip if contract file doesn't exist
-            if not os.path.exists(provider.contract_docx):
-                continue
-                
-            # Get the primary contact if available
-            contact = Contact.query.filter_by(provider_id=provider.id).first()
-            
-            contract_data = {
-                "id": provider.id,
-                "provider_name": provider.name,
-                "dba_name": provider.dba_name,
-                "provider_type": provider.provider_type,
-                "speciality": provider.specialty,
-                "npi": provider.npi,
-                "states": provider.states_in_contract,
-                "rate_type": provider.rate_type,
-                "contract_docx_path": provider.contract_docx,
-                "contract_pdf_path": provider.contract_pdf,
-                "contact": {
-                    "id": contact.id if contact else None,
-                    "name": contact.name if contact else None,
-                    "email": contact.email if contact else None,
-                    "phone": contact.phone if contact else None,
-                    "title": contact.title if contact else None,
-                    "preferred_contact_method": contact.preferred_contact_method if contact else None
-                } if contact else None,
-                "docx_url": url_for('intake.download_contract', provider_id=provider.id, file_type='docx', _external=True),
-                "pdf_url": url_for('intake.download_contract', provider_id=provider.id, file_type='pdf', _external=True) if provider.contract_pdf else None,
-                "generated_at": provider.created_at.isoformat() if provider.created_at else None
-            }
-            
-            results.append(contract_data)
-        
-        return jsonify({
-            "status": "success",
-            "count": len(results),
-            "contracts": results
-        })
-        
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
-
-@intake_bp.route("/api/mark_processed/<provider_id>", methods=["POST"])
-def api_mark_processed(provider_id):
-    """API endpoint for PowerAutomate to mark a contract as processed."""
-    try:
-        provider = Provider.query.get_or_404(provider_id)
-        
-        # Get data from request
-        data = request.json or {}
-        
-        # Update provider with processing information
-        provider.contract_email_sent = data.get('email_sent', True)
-        provider.contract_email_sent_at = datetime.utcnow()
-        provider.contract_email_sent_to = data.get('sent_to')
-        provider.contract_email_tracking_id = data.get('tracking_id')
-        
-        # Save changes
-        db.session.commit()
-        
-        return jsonify({
-            "status": "success",
-            "message": f"Provider {provider_id} marked as processed",
-            "provider": provider.name,
-            "timestamp": datetime.utcnow().isoformat()
-        })
-        
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
-
-@intake_bp.route("/intake", methods=["GET", "POST"])
-def intake():
-    if request.method == 'POST':
-        # Get provider information
-        name = request.form.get('name')
-        dba_name = request.form.get('dba_name')
-        address = request.form.get('address')
-        provider_type = request.form.get('provider_type')
-        states = request.form.get('states')
-        
-        # Create provider
-        provider = Provider(
-            name=name,
-            dba_name=dba_name,
-            address=address,
-            provider_type=provider_type,
-            states_in_contract=states
-        )
-        db.session.add(provider)
-        db.session.flush()  # Get the provider ID
-        
-        # Get contact information
-        contact_names = request.form.getlist('contact_name[]')
-        contact_phones = request.form.getlist('contact_phone[]')
-        contact_emails = request.form.getlist('contact_email[]')
-        
-        # Create contacts
-        for i in range(len(contact_names)):
-            if contact_names[i]:  # Only create if name is provided
-                contact = Contact(
-                    provider_id=provider.id,
-                    name=contact_names[i],
-                    phone=contact_phones[i] if i < len(contact_phones) else None,
-                    email=contact_emails[i] if i < len(contact_emails) else None
-                )
-                db.session.add(contact)
-        
-        db.session.commit()
-        flash('Provider and contacts created successfully!')
-        return redirect(url_for('provider.list_providers'))
-    
-    return render_template('providers/intake.html')

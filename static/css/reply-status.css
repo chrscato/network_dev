@@ -1,0 +1,69 @@
+/* Reply Status Indicators */
+.reply-status {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.reply-status.replied {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.reply-status.no-reply {
+    background-color: #f8d7da;
+    color: #842029;
+}
+
+.reply-status.pending {
+    background-color: #fff3cd;
+    color: #664d03;
+}
+
+/* Email Preview Styles */
+.email-preview {
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+/* Reply Timeline Styles */
+.reply-timeline {
+    margin-top: 1rem;
+    padding-left: 1rem;
+    border-left: 2px solid #dee2e6;
+}
+
+.reply-timeline-item {
+    position: relative;
+    padding-bottom: 1rem;
+}
+
+.reply-timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -1.5rem;
+    top: 0.25rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background-color: #0d6efd;
+}
+
+.reply-timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.reply-timeline-date {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.reply-timeline-content {
+    margin-top: 0.25rem;
+} 

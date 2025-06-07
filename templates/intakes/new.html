@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}New Intake - Network Development{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="text-center">New Intake</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('intake.new_intake') }}">
+                        <div class="mb-3">
+                            <label for="provider_id" class="form-label">Provider</label>
+                            <select class="form-select" id="provider_id" name="provider_id" required>
+                                <option value="">Select a provider...</option>
+                                {% for provider in providers %}
+                                <option value="{{ provider.id }}">{{ provider.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="contact_id" class="form-label">Contact (Optional)</label>
+                            <select class="form-select" id="contact_id" name="contact_id">
+                                <option value="">Select a contact...</option>
+                                {% for contact in contacts %}
+                                <option value="{{ contact.id }}">{{ contact.name }} ({{ contact.email }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="type" class="form-label">Type</label>
+                            <select class="form-select" id="type" name="type" required>
+                                <option value="initial">Initial</option>
+                                <option value="follow_up">Follow Up</option>
+                                <option value="contract">Contract</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="pending">Pending</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="4"></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Create Intake</button>
+                            <a href="{{ url_for('intake.list_intakes') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.getElementById('provider_id').addEventListener('change', function() {
+    const providerId = this.value;
+    const contactSelect = document.getElementById('contact_id');
+    
+    // Clear current options
+    contactSelect.innerHTML = '<option value="">Select a contact...</option>';
+    
+    if (providerId) {
+        // Filter contacts for selected provider
+        {% for contact in contacts %}
+        if ('{{ contact.provider_id }}' === providerId) {
+            const option = document.createElement('option');
+            option.value = '{{ contact.id }}';
+            option.textContent = '{{ contact.name }} ({{ contact.email }})';
+            contactSelect.appendChild(option);
+        }
+        {% endfor %}
+    }
+});
+</script>
+{% endblock %}
+{% endblock %} 

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Intake - Network Development{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Edit Intake</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="provider_id" class="form-label">Provider</label>
+                            <select class="form-select" id="provider_id" name="provider_id" required>
+                                <option value="">Select Provider</option>
+                                {% for provider in providers %}
+                                <option value="{{ provider.id }}" {% if provider.id == intake.provider_id %}selected{% endif %}>
+                                    {{ provider.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="contact_id" class="form-label">Contact (Optional)</label>
+                            <select class="form-select" id="contact_id" name="contact_id">
+                                <option value="">Select Contact</option>
+                                {% for contact in contacts %}
+                                <option value="{{ contact.id }}" {% if contact.id == intake.contact_id %}selected{% endif %}>
+                                    {{ contact.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="type" class="form-label">Type</label>
+                            <select class="form-select" id="type" name="type" required>
+                                <option value="new" {% if intake.type == 'new' %}selected{% endif %}>New Provider</option>
+                                <option value="update" {% if intake.type == 'update' %}selected{% endif %}>Update</option>
+                                <option value="termination" {% if intake.type == 'termination' %}selected{% endif %}>Termination</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="pending" {% if intake.status == 'pending' %}selected{% endif %}>Pending</option>
+                                <option value="in_progress" {% if intake.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                <option value="completed" {% if intake.status == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="cancelled" {% if intake.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3">{{ intake.notes or '' }}</textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('intake.view_intake', intake_id=intake.id) }}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.getElementById('provider_id').addEventListener('change', function() {
+    const providerId = this.value;
+    const contactSelect = document.getElementById('contact_id');
+    
+    // Clear current options
+    contactSelect.innerHTML = '<option value="">Select Contact</option>';
+    
+    if (providerId) {
+        // Fetch contacts for selected provider
+        fetch(`/api/contacts?provider_id=${providerId}`)
+            .then(response => response.json())
+            .then(contacts => {
+                contacts.forEach(contact => {
+                    const option = document.createElement('option');
+                    option.value = contact.id;
+                    option.textContent = contact.name;
+                    contactSelect.appendChild(option);
+                });
+            });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %} 

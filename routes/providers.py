@@ -1,7 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import login_required
 from models import db
 from models.provider import Provider
 from models.contact import Contact
+from models.outreach import Outreach
+from models.intake import Intake
 import uuid
 
 provider_bp = Blueprint("provider", __name__, url_prefix="/providers")
@@ -12,11 +15,13 @@ def provider_root():
     return redirect(url_for("provider.list_providers"))
 
 @provider_bp.route("/")
+@login_required
 def list_providers():
     providers = Provider.query.all()
     return render_template("providers/list.html", providers=providers)
 
 @provider_bp.route("/<provider_id>/edit", methods=["GET", "POST"])
+@login_required
 def edit_provider(provider_id):
     provider = Provider.query.get_or_404(provider_id)
     if request.method == "POST":
@@ -30,6 +35,7 @@ def edit_provider(provider_id):
     return render_template("providers/new_with_contacts.html", provider=provider)
 
 @provider_bp.route("/<provider_id>/delete", methods=["POST"])
+@login_required
 def delete_provider(provider_id):
     provider = Provider.query.get_or_404(provider_id)
     db.session.delete(provider)
@@ -38,6 +44,7 @@ def delete_provider(provider_id):
     return redirect(url_for("provider.list_providers"))
 
 @provider_bp.route("/new-with-contacts", methods=["GET", "POST"])
+@login_required
 def create_provider_with_contacts():
     if request.method == "POST":
         # Create the provider
@@ -85,6 +92,7 @@ def create_provider_with_contacts():
     return render_template("providers/new_with_contacts.html")
 
 @provider_bp.route("/api/providers/<provider_id>")
+@login_required
 def get_provider_api(provider_id):
     print(f"Fetching provider with ID: {provider_id}")  # Debug log
     provider = Provider.query.get(provider_id)

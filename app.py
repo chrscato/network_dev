@@ -1,8 +1,10 @@
 from flask import Flask, render_template, jsonify, request
 from flask_migrate import Migrate
+from flask_login import LoginManager, login_required
 from config import Config
 from models import db
 from models import provider, contact, outreach
+from models.user import User
 from routes.providers import provider_bp
 from routes.contacts import contact_bp
 from routes.outreach import outreach_bp
@@ -10,6 +12,7 @@ from routes.intake import intake_bp
 from routes.test_api import test_api_bp
 from routes.test_graph_email import test_graph_email_bp
 from routes.email import email_bp
+from routes.auth import auth_bp
 import os
 import logging
 
@@ -33,6 +36,17 @@ app.config.from_object(Config)
 app.secret_key = app.config['SECRET_KEY']
 db.init_app(app)
 migrate = Migrate(app, db)
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'auth.login'  # Use the auth blueprint's login route
+login_manager.login_message = 'Please log in to access this page.'
+login_manager.login_message_category = 'info'  # Use Bootstrap's info alert style
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get(user_id)
 
 # Check if Microsoft Graph API is configured
 graph_vars = ["MS_GRAPH_CLIENT_ID", "MS_GRAPH_CLIENT_SECRET", "MS_GRAPH_TENANT_ID", "MS_GRAPH_USER_EMAIL"]
@@ -88,6 +102,7 @@ app.register_blueprint(outreach_bp)
 app.register_blueprint(intake_bp)
 app.register_blueprint(test_api_bp)
 app.register_blueprint(test_graph_email_bp)
+app.register_blueprint(auth_bp)  # Register auth blueprint
 
 print("Registering email blueprint...")
 app.register_blueprint(email_bp)
@@ -99,6 +114,7 @@ email_routes = [str(rule) for rule in app.url_map.iter_rules() if rule.endpoint 
 print(f"Found {len(email_routes)} email routes: {email_routes}")
 
 @app.route("/")
+@login_required
 def home():
     return render_template("index.html")
 

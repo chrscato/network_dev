@@ -1,59 +1,83 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import login_required
 from models import db
 from models.outreach import Outreach
 from models.provider import Provider
 from models.contact import Contact
-import uuid
+from models.intake import Intake
+from datetime import datetime
+import json
 
-outreach_bp = Blueprint("outreach", __name__, url_prefix="/outreach")
+outreach_bp = Blueprint('outreach', __name__)
 
-@outreach_bp.route("/")
+@outreach_bp.route("/outreach")
+@login_required
 def list_outreach():
-    outreach = Outreach.query.all()
-    return render_template("outreach/list.html", outreach=outreach)
+    outreach_entries = Outreach.query.all()
+    return render_template("outreach/list.html", outreach_entries=outreach_entries)
 
-@outreach_bp.route("/new", methods=["GET", "POST"])
-def create_outreach():
-    providers = Provider.query.all()
-    contacts = Contact.query.all()
+@outreach_bp.route("/outreach/new", methods=["GET", "POST"])
+@login_required
+def new_outreach():
     if request.method == "POST":
-        new_outreach = Outreach(
-            id=str(uuid.uuid4()),
+        outreach = Outreach(
             provider_id=request.form["provider_id"],
-            contact_id=request.form["contact_id"] or None,
-            method=request.form["method"],
-            notes=request.form["notes"],
-            status=request.form["status"]
+            contact_id=request.form["contact_id"],
+            type=request.form["type"],
+            status=request.form["status"],
+            notes=request.form["notes"]
         )
-        db.session.add(new_outreach)
+        db.session.add(outreach)
         db.session.commit()
-        flash("Outreach logged.")
         return redirect(url_for("outreach.list_outreach"))
-    return render_template("outreach/form.html", providers=providers, contacts=contacts, outreach=None)
-
-@outreach_bp.route("/<outreach_id>/edit", methods=["GET", "POST"])
-def edit_outreach(outreach_id):
-    outreach = Outreach.query.get_or_404(outreach_id)
     providers = Provider.query.all()
     contacts = Contact.query.all()
+    return render_template("outreach/new.html", providers=providers, contacts=contacts)
+
+@outreach_bp.route("/outreach/<int:id>")
+@login_required
+def view_outreach(id):
+    outreach = Outreach.query.get_or_404(id)
+    return render_template("outreach/view.html", outreach=outreach)
+
+@outreach_bp.route("/outreach/<int:id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_outreach(id):
+    outreach = Outreach.query.get_or_404(id)
     if request.method == "POST":
         outreach.provider_id = request.form["provider_id"]
-        outreach.contact_id = request.form["contact_id"] or None
-        outreach.method = request.form["method"]
-        outreach.notes = request.form["notes"]
+        outreach.contact_id = request.form["contact_id"]
+        outreach.type = request.form["type"]
         outreach.status = request.form["status"]
+        outreach.notes = request.form["notes"]
         db.session.commit()
-        flash("Outreach updated.")
-        return redirect(url_for("outreach.list_outreach"))
-    return render_template("outreach/form.html", outreach=outreach, providers=providers, contacts=contacts)
+        return redirect(url_for("outreach.view_outreach", id=id))
+    providers = Provider.query.all()
+    contacts = Contact.query.all()
+    return render_template("outreach/edit.html", outreach=outreach, providers=providers, contacts=contacts)
 
-@outreach_bp.route("/<outreach_id>/delete", methods=["POST"])
-def delete_outreach(outreach_id):
-    outreach = Outreach.query.get_or_404(outreach_id)
+@outreach_bp.route("/outreach/<int:id>/delete", methods=["POST"])
+@login_required
+def delete_outreach(id):
+    outreach = Outreach.query.get_or_404(id)
     db.session.delete(outreach)
     db.session.commit()
-    flash("Outreach deleted.")
     return redirect(url_for("outreach.list_outreach"))
+
+@outreach_bp.route("/api/outreach")
+@login_required
+def api_outreach():
+    outreach_entries = Outreach.query.all()
+    return jsonify([{
+        'id': o.id,
+        'provider_id': o.provider_id,
+        'contact_id': o.contact_id,
+        'type': o.type,
+        'status': o.status,
+        'notes': o.notes,
+        'created_at': o.created_at.isoformat() if o.created_at else None,
+        'updated_at': o.updated_at.isoformat() if o.updated_at else None
+    } for o in outreach_entries])
 
 @outreach_bp.route("/run-jobs")
 def run_jobs():

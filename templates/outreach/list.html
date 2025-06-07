@@ -32,7 +32,7 @@
                 </div>
             </div>
             
-            <a href="{{ url_for('outreach.create_outreach') }}" class="btn btn-primary mb-3">Add New Outreach</a>
+            <a href="{{ url_for('outreach.new_outreach') }}" class="btn btn-primary mb-3">Add New Outreach</a>
             
             {% if outreach %}
             <div class="table-responsive">
@@ -131,7 +131,7 @@
             </div>
             {% else %}
             <div class="alert alert-info">
-                <p>No outreach activities found. <a href="{{ url_for('outreach.create_outreach') }}">Create the first one</a>.</p>
+                <p>No outreach activities found. <a href="{{ url_for('outreach.new_outreach') }}">Create the first one</a>.</p>
             </div>
             {% endif %}
         </div>
