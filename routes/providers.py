@@ -6,6 +6,11 @@ import uuid
 
 provider_bp = Blueprint("provider", __name__, url_prefix="/providers")
 
+@provider_bp.route("")
+def provider_root():
+    """Redirect to list view."""
+    return redirect(url_for("provider.list_providers"))
+
 @provider_bp.route("/")
 def list_providers():
     providers = Provider.query.all()

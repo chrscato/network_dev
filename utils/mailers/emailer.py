@@ -30,9 +30,15 @@ def send_email(to_email, subject, body, attachments=None):
         from_email = "automate.cdx@gmail.com"  # Your verified sender email
         
         logger.debug(f"SMTP Configuration - Server: {smtp_server}, Port: {smtp_port}, Username: {smtp_username}")
+        logger.debug(f"SMTP Password length: {len(smtp_password) if smtp_password else 0}")
         
         if not all([smtp_server, smtp_port, smtp_username, smtp_password]):
-            raise ValueError("SMTP configuration is incomplete")
+            missing = []
+            if not smtp_server: missing.append('SMTP_SERVER')
+            if not smtp_port: missing.append('SMTP_PORT')
+            if not smtp_username: missing.append('SMTP_USERNAME')
+            if not smtp_password: missing.append('SMTP_PASSWORD')
+            raise ValueError(f"SMTP configuration is incomplete. Missing: {', '.join(missing)}")
         
         # Create message container
         msg = MIMEMultipart()
@@ -68,6 +74,7 @@ def send_email(to_email, subject, body, attachments=None):
             server.starttls()
             logger.debug("TLS started")
             
+            logger.debug("Attempting SMTP login...")
             server.login(smtp_username, smtp_password)
             logger.debug("SMTP login successful")
             

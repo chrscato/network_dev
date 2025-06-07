@@ -5,3 +5,14 @@ python-dotenv
 python-docx
 PyYAML
 docx2pdf 
+
+flask
+flask_sqlalchemy
+flask_migrate
+python-dotenv
+requests
+msal
+python-docx
+docx2pdf
+uuid
+alembic

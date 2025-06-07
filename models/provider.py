@@ -23,7 +23,13 @@ class Provider(db.Model):
     # Contract file paths
     contract_docx = db.Column(db.String(256))
     contract_pdf = db.Column(db.String(256))
-
+    
+    # Contract email status fields
+    contract_email_sent = db.Column(db.Boolean, default=False)
+    contract_email_sent_at = db.Column(db.DateTime)
+    contract_email_sent_to = db.Column(db.String(128))
+    contract_email_tracking_id = db.Column(db.String(128))
+    
     # Define the relationship with Contact model
     contacts = db.relationship('Contact', backref='provider', lazy=True, cascade="all, delete-orphan")
     outreach = db.relationship('Outreach', backref='provider', lazy=True)
@@ -46,6 +52,17 @@ class Provider(db.Model):
     
     def has_contract_pdf(self):
         return self.contract_pdf and os.path.exists(self.contract_pdf)
+    
+    def get_contract_status(self):
+        """Get the current status of the contract process."""
+        if not self.contract_docx:
+            return "not_generated"
+        elif not self.has_contract_docx():
+            return "file_missing"
+        elif self.contract_email_sent:
+            return "email_sent"
+        else:
+            return "ready_to_send"
 
     def __repr__(self):
-        return f"<Provider {self.name}>" 
+        return f"<Provider {self.name}>"
