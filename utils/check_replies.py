@@ -4,11 +4,11 @@ import requests
 import json
 from datetime import datetime, timedelta, timezone
 import re
+from flask import current_app
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app import app
 from models import db
 from models.outreach import Outreach
 from utils.mailers.graph_emailer import get_access_token
@@ -197,40 +197,44 @@ def check_all_recent_outreach(days_back=7):
     """
     Check all recent outreach for replies and update the database.
     """
-    with app.app_context():
-        # Get outreach records with conversation IDs from the last N days
-        cutoff_date = datetime.now() - timedelta(days=days_back)
+    # Get outreach records with conversation IDs from the last N days
+    cutoff_date = datetime.now() - timedelta(days=days_back)
+    
+    outreach_records = Outreach.query.filter(
+        Outreach.conversation_id.isnot(None),
+        Outreach.created_at >= cutoff_date,
+        Outreach.method == 'email'
+    ).all()
+    
+    print(f"Checking {len(outreach_records)} outreach records for replies...")
+    
+    replies_found = 0
+    
+    for outreach in outreach_records:
+        print(f"\nChecking outreach {outreach.id} created at {outreach.created_at}")
         
-        outreach_records = Outreach.query.filter(
-            Outreach.conversation_id.isnot(None),
-            Outreach.created_at >= cutoff_date,
-            Outreach.method == 'email'
-        ).all()
+        replies = check_conversation_for_replies(
+            outreach.conversation_id, 
+            outreach.created_at,
+            outreach  # Pass the outreach record for database updates
+        )
         
-        print(f"Checking {len(outreach_records)} outreach records for replies...")
-        
-        replies_found = 0
-        
-        for outreach in outreach_records:
-            print(f"\nChecking outreach {outreach.id} created at {outreach.created_at}")
+        if replies:
+            print(f"  ✅ Found {len(replies)} new replies!")
+            for reply in replies:
+                print(f"    Reply from {reply['from_email']}: {reply['subject'][:50]}...")
             
-            replies = check_conversation_for_replies(
-                outreach.conversation_id, 
-                outreach.created_at,
-                outreach  # Pass the outreach record for database updates
-            )
-            
-            if replies:
-                print(f"  ✅ Found {len(replies)} new replies!")
-                for reply in replies:
-                    print(f"    Reply from {reply['from_email']}: {reply['subject'][:50]}...")
-                
-                replies_found += 1
-            else:
-                print(f"  📭 No new replies found.")
-        
-        print(f"\n🎉 Total outreach records with new replies: {replies_found}")
-        return replies_found
+            replies_found += 1
+        else:
+            print(f"  📭 No new replies found.")
+    
+    print(f"\n🎉 Total outreach records with new replies: {replies_found}")
+    return replies_found
 
 if __name__ == "__main__":
-    check_all_recent_outreach(days_back=7) 
+    # Create a Flask app context for running the script directly
+    from flask import Flask
+    app = Flask(__name__)
+    app.config.from_object('config.Config')
+    with app.app_context():
+        check_all_recent_outreach(days_back=7) 
