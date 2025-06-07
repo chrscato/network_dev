@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 from flask_migrate import Migrate
 from config import Config
 from models import db
@@ -9,16 +9,9 @@ from routes.outreach import outreach_bp
 from routes.intake import intake_bp
 from routes.test_api import test_api_bp
 from routes.test_graph_email import test_graph_email_bp
+from routes.email import email_bp
 import os
 import logging
-
-from flask import Flask, render_template, jsonify, request
-from flask_migrate import Migrate
-from flask_cors import CORS  # Add CORS support
-from dotenv import load_dotenv
-import logging
-import os
-
 
 from dotenv import load_dotenv
 load_dotenv()  # Load environment variables from .env file
@@ -26,6 +19,14 @@ load_dotenv()  # Load environment variables from .env file
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Add this debug code temporarily
+print("=== DEBUGGING BLUEPRINT REGISTRATION ===")
+try:
+    from routes.email import email_bp as debug_email_bp
+    print(f"✅ Email blueprint imported: {debug_email_bp.name} with prefix {debug_email_bp.url_prefix}")
+except Exception as e:
+    print(f"❌ Email blueprint import failed: {e}")
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -88,30 +89,20 @@ app.register_blueprint(intake_bp)
 app.register_blueprint(test_api_bp)
 app.register_blueprint(test_graph_email_bp)
 
+print("Registering email blueprint...")
+app.register_blueprint(email_bp)
+print("✅ Email blueprint registered successfully")
+
+# Debug: Check if email routes are registered
+print("=== CHECKING REGISTERED ROUTES ===")
+email_routes = [str(rule) for rule in app.url_map.iter_rules() if rule.endpoint and rule.endpoint.startswith('email.')]
+print(f"Found {len(email_routes)} email routes: {email_routes}")
+
 @app.route("/")
 def home():
     return render_template("index.html")
 
-@app.route("/send", methods=["POST"])
-def send_message():
-    """Endpoint for sending messages or forms."""
-    try:
-        # Process the form data
-        data = request.form
-        # Or process JSON data
-        # data = request.json
-        
-        return jsonify({
-            "status": "success",
-            "message": "Data received successfully"
-        })
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
-
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(host='0.0.0.0', port=5000, debug=True)  # Remove ssl_context='adhoc'
+    app.run(host='0.0.0.0', port=5000, debug=True)

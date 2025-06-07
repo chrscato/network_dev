@@ -79,31 +79,47 @@
             e.preventDefault();
             
             const recipient = document.getElementById('recipient').value;
+            const subject = document.getElementById('subject').value;
+            const body = document.getElementById('body').value;
+            
+            // Prepare the data
+            const data = {
+                recipient: recipient,
+                subject: subject,
+                body: body,
+                template_name: 'custom'  // Using custom template for test emails
+            };
             
             // Send the test email
-            fetch(`/api/test-graph-email/send?recipient=${encodeURIComponent(recipient)}`)
-                .then(response => response.json())
-                .then(data => {
-                    const resultElement = document.getElementById('result');
-                    
-                    if (data.status === 'success') {
-                        resultElement.className = 'result success';
-                        resultElement.innerHTML = `<h3>Success!</h3><p>${data.message}</p><p>Email System: ${data.email_system || "Unknown"}</p>`;
-                    } else {
-                        resultElement.className = 'result error';
-                        resultElement.innerHTML = `<h3>Error</h3><p>${data.message}</p>`;
-                        if (data.error_details) {
-                            resultElement.innerHTML += `<p>Details: ${JSON.stringify(data.error_details)}</p>`;
-                        }
+            fetch('/email/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultElement = document.getElementById('result');
+                
+                if (data.status === 'success') {
+                    resultElement.className = 'result success';
+                    resultElement.innerHTML = `<h3>Success!</h3><p>${data.message}</p>`;
+                } else {
+                    resultElement.className = 'result error';
+                    resultElement.innerHTML = `<h3>Error</h3><p>${data.error || data.message}</p>`;
+                    if (data.error_details) {
+                        resultElement.innerHTML += `<p>Details: ${JSON.stringify(data.error_details)}</p>`;
                     }
-                    
-                    resultElement.style.display = 'block';
-                })
-                .catch(error => {
-                    document.getElementById('result').className = 'result error';
-                    document.getElementById('result').innerHTML = `<h3>Error</h3><p>${error.message}</p>`;
-                    document.getElementById('result').style.display = 'block';
-                });
+                }
+                
+                resultElement.style.display = 'block';
+            })
+            .catch(error => {
+                document.getElementById('result').className = 'result error';
+                document.getElementById('result').innerHTML = `<h3>Error</h3><p>${error.message}</p>`;
+                document.getElementById('result').style.display = 'block';
+            });
         });
     </script>
 </body>

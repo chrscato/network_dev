@@ -1,11 +1,11 @@
 templates:
   provider_outreach_cold:
-    subject: "Clarity-dx Provider Outreach - {provider_name}"
+    subject: "Partnership Opportunity - Clarity Diagnostics Network Expansion"
     body: {
       "metadata": {
         "email_type": "provider_outreach_cold",
         "timestamp": "{timestamp}",
-        "template_version": "1.0",
+        "template_version": "2.0",
         "provider_id": "{provider_id}"
       },
       "provider": {
@@ -41,7 +41,49 @@ templates:
         }
       ],
       "outreach_template": {
-        "subject": "Clarity-dx Contract for Partnership with {provider_name}",
-        "body": "Dear {recipient_name},\n\nMy name is Kim Vileno, and I represent Clarity dx. We are expanding our radiology network and are looking for a reliable partner to refer our workers' compensation patients to. We believe that your facility, {provider_name}{specialty_info}, would be an excellent fit to perform radiology exams for our referrals.\n\nAs the authorizer and scheduler of the exams, Clarity dx will be the payor. Our company was founded with the simple formula of \"Right Read. Right Radiologist. Right Result.\" We are dedicated to providing specialized diagnostic imaging services, and we believe that your facility can provide the coverage that our referrals will need in the area.\n\nPlease find attached the agreement that outlines the terms of our potential partnership. If you have any questions, please do not hesitate to contact me. You can also visit our website at www.clarity-dx.com to learn more about our company.\n\nThank you for your consideration, and we look forward to the opportunity to work together.\n\nBest regards,\nKim Vileno"
+        "subject": "Partnership Opportunity - Clarity Diagnostics Network Expansion",
+        "body": "Dear {recipient_name},\n\nI hope this message finds you well. My name is Kim Vileno, and I represent Clarity Diagnostics. We are strategically expanding our network and believe {provider_name}{specialty_info} would be an excellent addition to our growing partnership network.\n\nWe specialize in workers' compensation referrals and are seeking reliable partners who share our commitment to quality diagnostic services. Clarity Diagnostics serves as both the authorizer and payor for all referred examinations, ensuring streamlined processes and prompt payment.\n\nOur company operates on the principle of \"Right Read. Right Radiologist. Right Result.\" We've built our reputation on delivering specialized diagnostic imaging services, and we believe your facility can provide the exceptional coverage our referrals require in your area.\n\nI've attached a partnership agreement that outlines the terms and benefits of working with Clarity Diagnostics. The agreement includes:\n\n- Competitive reimbursement rates\n- Guaranteed payment terms\n- Streamlined referral process\n- Dedicated support team\n\nI would welcome the opportunity to discuss this partnership further at your convenience. Please feel free to reach out with any questions or to schedule a brief call.\n\nFor additional information about our company and services, please visit clarity-dx dot com.\n\nThank you for considering this opportunity. I look forward to the possibility of a mutually beneficial partnership.\n\nBest regards,\n\nKim Vileno\nNetwork Development\nClarity Diagnostics\nPhone: [Your Phone Number]\nEmail: [Your Email]"
       }
-    } 
+    }
+
+  # Alternative shorter version
+  provider_outreach_concise:
+    subject: "Partnership Opportunity - {provider_name}"
+    body: {
+      "metadata": {
+        "email_type": "provider_outreach_concise",
+        "timestamp": "{timestamp}",
+        "template_version": "1.0",
+        "provider_id": "{provider_id}"
+      },
+      "provider": {
+        "basic_info": {
+          "name": "{provider_name}",
+          "dba_name": "{dba_name}",
+          "specialty": "{specialty}",
+          "provider_type": "{provider_type}"
+        },
+        "location": {
+          "address": "{address}",
+          "states": "{states}"
+        }
+      },
+      "contacts": [
+        {
+          "name": "{recipient_name}",
+          "title": "{contact_title}",
+          "email": "{contact_email}"
+        }
+      ],
+      "attachments": [
+        {
+          "filename": "{dba_name}_Agreement.pdf",
+          "path": "contracts/{dba_name}_Agreement.pdf",
+          "mime_type": "application/pdf"
+        }
+      ],
+      "outreach_template": {
+        "subject": "Partnership Opportunity - {provider_name}",
+        "body": "Dear {recipient_name},\n\nI'm Kim Vileno from Clarity Diagnostics. We're expanding our workers' compensation network and would like to partner with {provider_name} for referrals in your area.\n\nKey benefits:\n- We handle all authorization and payment\n- Competitive reimbursement rates\n- Streamlined referral process\n- Prompt payment guaranteed\n\nI've attached our partnership agreement for your review. Would you be available for a brief call this week to discuss the details?\n\nBest regards,\n\nKim Vileno\nClarity Diagnostics\n[Phone] | [Email]"
+      }
+    }

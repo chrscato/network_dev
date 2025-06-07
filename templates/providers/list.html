@@ -250,7 +250,11 @@
                 <button type="submit" onclick="return confirm('Delete provider?')" class="action-button">Delete</button>
             </form>
             <button type="button" onclick="openCustomRatesModal('{{ p.id }}')" class="action-link generate-contract">Generate Contract</button>
-            <button type="button" onclick="openEmailModal('{{ p.id }}')" class="action-link" style="background-color: #9C27B0;">Send Email</button>
+            <form method="POST" action="/email/send" style="display:inline;">
+                <input type="hidden" name="provider_id" value="{{ p.id }}">
+                <input type="hidden" name="template_name" value="provider_outreach_cold">
+                <button type="submit" class="action-link" style="background-color: #9C27B0;">Send Email</button>
+            </form>
             {% if p.has_contract_docx() or p.has_contract_pdf() %}
             <div class="download-buttons">
                 {% if p.has_contract_docx() %}
@@ -333,14 +337,15 @@
             <div class="rate-type-selector">
                 <label for="email_type">Select Email Type:</label>
                 <select id="email_type" name="email_type" onchange="toggleEmailInputs()" required>
-                    <option value="standard">Provider Outreach - Cold</option>
+                    <option value="provider_outreach_cold">Provider Outreach - Cold</option>
+                    <option value="provider_outreach_followup">Provider Outreach - Follow-up</option>
                     <option value="custom">Custom Message</option>
                 </select>
             </div>
 
             <!-- Standard Email Section -->
             <div id="standardEmail" class="rate-section">
-                <p>This will send a cold outreach email template to the provider.</p>
+                <p>This will send a pre-configured email template to the provider.</p>
             </div>
 
             <!-- Custom Email Section -->
@@ -601,7 +606,7 @@
         }
     }
 
-    // Add form submission handler for email form
+    // Update the email form submission handler
     document.getElementById("emailForm").addEventListener("submit", function(event) {
         event.preventDefault(); // Prevent default form submission
         
@@ -611,11 +616,17 @@
         // Prepare the data
         const data = {
             provider_id: providerId,
-            template_name: emailType === 'standard' ? 'provider_outreach_cold' : 'custom'
+            template_name: emailType
         };
         
+        // If it's a custom email, add the subject and body
+        if (emailType === 'custom') {
+            data.subject = document.getElementById('email_subject').value;
+            data.body = document.getElementById('email_body').value;
+        }
+        
         // Send the request
-        fetch('/send', {
+        fetch('/email/send', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -629,7 +640,7 @@
             } else {
                 alert('Email sent successfully!');
                 closeEmailModal();
-                // Optionally refresh the page or update the UI
+                // Refresh the page to show updated status
                 window.location.reload();
             }
         })
