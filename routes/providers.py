@@ -6,6 +6,7 @@ from models.contact import Contact
 from models.outreach import Outreach
 from models.intake import Intake
 import uuid
+import os
 
 provider_bp = Blueprint("provider", __name__, url_prefix="/providers")
 
@@ -113,4 +114,63 @@ def get_provider_api(provider_id):
         "npi": provider.npi,
         "specialty": provider.specialty,
         "status": provider.status
-    }) 
+    })
+
+@provider_bp.route("/<provider_id>/contract-options", methods=["GET", "POST"])
+@login_required
+def contract_options(provider_id):
+    provider = Provider.query.get_or_404(provider_id)
+    
+    if request.method == "POST":
+        # This is the same logic as generate_contract_route
+        rate_type = request.form.get('rate_type', 'standard')
+        
+        custom_rates = None
+        wcfs_percentages = None
+
+        if rate_type == 'custom':
+            custom_rates = {
+                'mri_without': float(request.form.get('mri_without_rate', 0)),
+                'mri_with': float(request.form.get('mri_with_rate', 0)),
+                'mri_both': float(request.form.get('mri_both_rate', 0)),
+                'ct_without': float(request.form.get('ct_without_rate', 0)),
+                'ct_with': float(request.form.get('ct_with_rate', 0)),
+                'ct_both': float(request.form.get('ct_both_rate', 0)),
+                'xray': float(request.form.get('xray_rate', 0)),
+                'arthrogram': float(request.form.get('arthrogram_rate', 0))
+            }
+        elif rate_type == 'wcfs':
+            wcfs_percentages = {
+                'mri_without': float(request.form.get('mri_without_wcfs', 80)),
+                'mri_with': float(request.form.get('mri_with_wcfs', 80)),
+                'mri_both': float(request.form.get('mri_both_wcfs', 80)),
+                'ct_without': float(request.form.get('ct_without_wcfs', 80)),
+                'ct_with': float(request.form.get('ct_with_wcfs', 80)),
+                'ct_both': float(request.form.get('ct_both_wcfs', 80)),
+                'xray': float(request.form.get('xray_wcfs', 80)),
+                'arthrogram': float(request.form.get('arthrogram_wcfs', 80))
+            }
+
+        try:
+            from utils.generate_contract import generate_contract
+            docx_path, pdf_path = generate_contract(
+                provider_id,
+                method=rate_type,
+                wcfs_percentages=wcfs_percentages,
+                custom_rates=custom_rates
+            )
+            
+            if os.path.exists(docx_path):
+                flash(f"Contract generated successfully!")
+                provider.contract_docx = docx_path
+                
+            if os.path.exists(pdf_path):
+                provider.contract_pdf = pdf_path
+            
+            db.session.commit()
+            return redirect(url_for("provider.list_providers"))
+            
+        except Exception as e:
+            flash(f"Error generating contract: {e}")
+    
+    return render_template("providers/contract_options.html", provider=provider) 

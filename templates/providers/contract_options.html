@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Contract Options - {{ provider.name }}{% endblock %}
+
+{% block heading %}Generate Contract: {{ provider.name }}{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .contract-form {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    .rate-type-section {
+        border: 1px solid #ddd;
+        margin: 20px 0;
+        padding: 20px;
+        border-radius: 5px;
+    }
+    .rate-type-section h3 {
+        margin-top: 0;
+    }
+    .rate-inputs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-top: 15px;
+    }
+    .rate-input {
+        display: flex;
+        flex-direction: column;
+    }
+    .rate-input label {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .rate-input input {
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .submit-btn {
+        background-color: #4CAF50;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        width: 100%;
+        margin-top: 20px;
+    }
+    .submit-btn:hover {
+        background-color: #45a049;
+    }
+    .back-link {
+        display: inline-block;
+        margin-top: 20px;
+        color: #333;
+        text-decoration: none;
+    }
+    .quick-option {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    .quick-btn {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #2196F3;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        margin: 0 5px;
+    }
+    .quick-btn:hover {
+        background-color: #0b7dda;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="contract-form">
+    
+    <!-- Quick Options -->
+    <div class="rate-type-section">
+        <h3>Quick Options</h3>
+        <div class="quick-option">
+            <form method="POST" action="{{ url_for('provider.contract_options', provider_id=provider.id) }}" style="display: inline;">
+                <input type="hidden" name="rate_type" value="standard">
+                <button type="submit" class="quick-btn">Use Standard Rates</button>
+            </form>
+            <form method="POST" action="{{ url_for('provider.contract_options', provider_id=provider.id) }}" style="display: inline;">
+                <input type="hidden" name="rate_type" value="wcfs">
+                <input type="hidden" name="mri_without_wcfs" value="80">
+                <input type="hidden" name="mri_with_wcfs" value="80">
+                <input type="hidden" name="mri_both_wcfs" value="80">
+                <input type="hidden" name="ct_without_wcfs" value="80">
+                <input type="hidden" name="ct_with_wcfs" value="80">
+                <input type="hidden" name="ct_both_wcfs" value="80">
+                <input type="hidden" name="xray_wcfs" value="80">
+                <input type="hidden" name="arthrogram_wcfs" value="80">
+                <button type="submit" class="quick-btn">Use 80% WCFS</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom WCFS Percentages -->
+    <div class="rate-type-section">
+        <h3>Custom WCFS Percentages</h3>
+        <form method="POST" action="{{ url_for('provider.contract_options', provider_id=provider.id) }}">
+            <input type="hidden" name="rate_type" value="wcfs">
+            <div class="rate-inputs">
+                <div class="rate-input">
+                    <label for="mri_without_wcfs">MRI without Contrast (%):</label>
+                    <input type="number" name="mri_without_wcfs" value="80" min="0" max="100" required>
+                </div>
+                <div class="rate-input">
+                    <label for="mri_with_wcfs">MRI with Contrast (%):</label>
+                    <input type="number" name="mri_with_wcfs" value="80" min="0" max="100" required>
+                </div>
+                <div class="rate-input">
+                    <label for="mri_both_wcfs">MRI w/ & w/o Contrast (%):</label>
+                    <input type="number" name="mri_both_wcfs" value="80" min="0" max="100" required>
+                </div>
+                <div class="rate-input">
+                    <label for="ct_without_wcfs">CT without Contrast (%):</label>
+                    <input type="number" name="ct_without_wcfs" value="80" min="0" max="100" required>
+                </div>
+                <div class="rate-input">
+                    <label for="ct_with_wcfs">CT with Contrast (%):</label>
+                    <input type="number" name="ct_with_wcfs" value="80" min="0" max="100" required>
+                </div>
+                <div class="rate-input">
+                    <label for="ct_both_wcfs">CT w/ & w/o Contrast (%):</label>
+                    <input type="number" name="ct_both_wcfs" value="80" min="0" max="100" required>
+                </div>
+                <div class="rate-input">
+                    <label for="xray_wcfs">X-Ray (%):</label>
+                    <input type="number" name="xray_wcfs" value="80" min="0" max="100" required>
+                </div>
+                <div class="rate-input">
+                    <label for="arthrogram_wcfs">Arthrogram (%):</label>
+                    <input type="number" name="arthrogram_wcfs" value="80" min="0" max="100" required>
+                </div>
+            </div>
+            <button type="submit" class="submit-btn">Generate Contract with Custom WCFS</button>
+        </form>
+    </div>
+
+    <!-- Custom Dollar Amounts -->
+    <div class="rate-type-section">
+        <h3>Custom Dollar Amounts</h3>
+        <form method="POST" action="{{ url_for('provider.contract_options', provider_id=provider.id) }}">
+            <input type="hidden" name="rate_type" value="custom">
+            <div class="rate-inputs">
+                <div class="rate-input">
+                    <label for="mri_without_rate">MRI without Contrast ($):</label>
+                    <input type="number" name="mri_without_rate" value="300" min="0" step="0.01" required>
+                </div>
+                <div class="rate-input">
+                    <label for="mri_with_rate">MRI with Contrast ($):</label>
+                    <input type="number" name="mri_with_rate" value="400" min="0" step="0.01" required>
+                </div>
+                <div class="rate-input">
+                    <label for="mri_both_rate">MRI w/ & w/o Contrast ($):</label>
+                    <input type="number" name="mri_both_rate" value="450" min="0" step="0.01" required>
+                </div>
+                <div class="rate-input">
+                    <label for="ct_without_rate">CT without Contrast ($):</label>
+                    <input type="number" name="ct_without_rate" value="200" min="0" step="0.01" required>
+                </div>
+                <div class="rate-input">
+                    <label for="ct_with_rate">CT with Contrast ($):</label>
+                    <input type="number" name="ct_with_rate" value="275" min="0" step="0.01" required>
+                </div>
+                <div class="rate-input">
+                    <label for="ct_both_rate">CT w/ & w/o Contrast ($):</label>
+                    <input type="number" name="ct_both_rate" value="350" min="0" step="0.01" required>
+                </div>
+                <div class="rate-input">
+                    <label for="xray_rate">X-Ray ($):</label>
+                    <input type="number" name="xray_rate" value="25" min="0" step="0.01" required>
+                </div>
+                <div class="rate-input">
+                    <label for="arthrogram_rate">Arthrogram ($):</label>
+                    <input type="number" name="arthrogram_rate" value="570" min="0" step="0.01" required>
+                </div>
+            </div>
+            <button type="submit" class="submit-btn">Generate Contract with Custom Rates</button>
+        </form>
+    </div>
+
+</div>
+
+<a href="{{ url_for('provider.list_providers') }}" class="back-link">← Back to Providers</a>
+{% endblock %} 

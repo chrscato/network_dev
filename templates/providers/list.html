@@ -249,7 +249,7 @@
             <form method="POST" action="{{ url_for('provider.delete_provider', provider_id=p.id) }}" style="display:inline;">
                 <button type="submit" onclick="return confirm('Delete provider?')" class="action-button">Delete</button>
             </form>
-            <button type="button" onclick="openCustomRatesModal('{{ p.id }}')" class="action-link generate-contract">Generate Contract</button>
+            <a href="{{ url_for('provider.contract_options', provider_id=p.id) }}" class="action-link generate-contract">Contract Options</a>
             <form method="POST" action="/email/send" style="display:inline;">
                 <input type="hidden" name="provider_id" value="{{ p.id }}">
                 <input type="hidden" name="template_name" value="provider_outreach_cold">

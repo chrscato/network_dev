@@ -83,12 +83,13 @@ def check_conversation_for_replies(conversation_id, original_outreach_date, outr
         if original_outreach_date.tzinfo is None:
             original_outreach_date = original_outreach_date.replace(tzinfo=timezone.utc)
         
-        # Get recent messages and filter client-side
+        # Get messages specifically from this conversation
         endpoint = f"https://graph.microsoft.com/v1.0/users/{user_email}/messages"
         params = {
             '$select': 'id,subject,from,receivedDateTime,conversationId,bodyPreview',
             '$orderby': 'receivedDateTime desc',
-            '$top': 50
+            '$filter': f"conversationId eq '{conversation_id}'",
+            '$top': 100  # Increased from 50 to 100
         }
         
         response = requests.get(endpoint, headers=headers, params=params)
@@ -96,16 +97,8 @@ def check_conversation_for_replies(conversation_id, original_outreach_date, outr
         print(f"Response status: {response.status_code}")
         
         if response.status_code == 200:
-            all_messages = response.json().get('value', [])
-            print(f"Retrieved {len(all_messages)} recent messages")
-            
-            # Filter for messages in our conversation
-            conversation_messages = [
-                msg for msg in all_messages 
-                if msg.get('conversationId') == conversation_id
-            ]
-            
-            print(f"Found {len(conversation_messages)} messages in our conversation")
+            conversation_messages = response.json().get('value', [])
+            print(f"Retrieved {len(conversation_messages)} messages in conversation")
             
             # Filter for replies (not from us, received after our outreach)
             new_replies = []
@@ -139,7 +132,7 @@ def check_conversation_for_replies(conversation_id, original_outreach_date, outr
                     print(f"    Skipping - before outreach date ({original_outreach_date})")
                     continue
                 
-                # Skip if we already processed this reply (check if it's newer than last_reply_date)
+                # Skip if we already processed this reply
                 if outreach_record.last_reply_date and received_date <= outreach_record.last_reply_date.replace(tzinfo=timezone.utc):
                     print(f"    Skipping - already processed")
                     continue
@@ -164,6 +157,9 @@ def check_conversation_for_replies(conversation_id, original_outreach_date, outr
                 latest_reply = new_replies[0]
                 
                 print(f"📧 Updating database with {len(new_replies)} new replies")
+                print(f"  Latest reply from: {latest_reply['from_email']}")
+                print(f"  Subject: {latest_reply['subject']}")
+                print(f"  Preview: {latest_reply['preview'][:100]}...")
                 
                 # Update the outreach record
                 outreach_record.mark_reply_received(

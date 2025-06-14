@@ -193,19 +193,28 @@ def generate_contract(provider_id, method='standard', custom_rates=None, wcfs_pe
     if not provider:
         raise ValueError("Provider not found")
 
+    print(f"🔍 Generating contract for provider: {provider.name}")
+    print(f"🔍 Method: {method}")
+    print(f"🔍 Provider data: name={provider.name}, dba={provider.dba_name}, address={provider.address}")
+
     # Split state list - handle None case
     if provider.states_in_contract:
         states = [s.strip() for s in provider.states_in_contract.split(",") if s.strip()]
     else:
         states = ["CA"]  # Default to California if no states specified
 
+    print(f"🔍 States: {states}")
+
     # Get rates based on the selected method
     rates = get_rates_by_method(provider_id, method, custom_rates, wcfs_percentages)
+    print(f"🔍 Rates: {rates}")
 
     # Load template - ensure we use the exact path specified
     template_path = "templates/contracts/IMAGING_TEMPLATE.docx"
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Template not found at {template_path}")
+
+    print(f"🔍 Template found at: {template_path}")
 
     # Create output paths
     output_folder = "contracts"
@@ -219,6 +228,8 @@ def generate_contract(provider_id, method='standard', custom_rates=None, wcfs_pe
     docx_path = os.path.join(output_folder, f"{filename}.docx")
     pdf_path = os.path.join(output_folder, f"{filename}.pdf")
 
+    print(f"🔍 Output paths - DOCX: {docx_path}, PDF: {pdf_path}")
+
     # Create a copy of the template for this contract
     shutil.copy2(template_path, docx_path)
     
@@ -228,45 +239,61 @@ def generate_contract(provider_id, method='standard', custom_rates=None, wcfs_pe
     # Import XML parser for table formatting
     from docx.oxml import parse_xml
     
+    print("🔍 Starting placeholder replacement...")
+    
     # Replace all placeholders in paragraphs
     for i, paragraph in enumerate(doc.paragraphs):
         text = paragraph.text
         if "{{provider_name}}" in text:
+            print(f"🔍 Replacing provider_name with: {provider.name}")
             text = text.replace("{{provider_name}}", provider.name)
             paragraph.text = text
         elif "{{dba_name}}" in text:
+            print(f"🔍 Replacing dba_name with: {provider.dba_name or ''}")
             text = text.replace("{{dba_name}}", provider.dba_name or "")
             paragraph.text = text
         elif "{{address}}" in text:
+            print(f"🔍 Replacing address with: {provider.address or ''}")
             text = text.replace("{{address}}", provider.address or "")
             paragraph.text = text
         elif "{{provider_type}}" in text:
+            print(f"🔍 Replacing provider_type with: {provider.provider_type or ''}")
             text = text.replace("{{provider_type}}", provider.provider_type or "")
             paragraph.text = text
         elif "{{npi}}" in text:
+            print(f"🔍 Replacing npi with: {provider.npi or ''}")
             text = text.replace("{{npi}}", provider.npi or "")
             paragraph.text = text
         elif "{{specialty}}" in text:
+            print(f"🔍 Replacing specialty with: {provider.specialty or ''}")
             text = text.replace("{{specialty}}", provider.specialty or "")
             paragraph.text = text
         elif "{{rate_type}}" in text:
+            print(f"🔍 Replacing rate_type with: {method}")
             text = text.replace("{{rate_type}}", method)
             paragraph.text = text
         elif "{{wcfs_percentage}}" in text:
             if method == 'wcfs' and wcfs_percentages:
                 # For WCFS method, show the average percentage
                 avg_percentage = sum(wcfs_percentages.values()) / len(wcfs_percentages)
+                print(f"🔍 Replacing wcfs_percentage with: {avg_percentage:.1f}")
                 text = text.replace("{{wcfs_percentage}}", f"{avg_percentage:.1f}")
             else:
+                print("🔍 Replacing wcfs_percentage with: 0")
                 text = text.replace("{{wcfs_percentage}}", "0")
             paragraph.text = text
         elif "{{states}}" in text:
-            text = text.replace("{{states}}", ", ".join(states))
+            states_text = ", ".join(states)
+            print(f"🔍 Replacing states with: {states_text}")
+            text = text.replace("{{states}}", states_text)
             paragraph.text = text
         elif "{{date}}" in text:
-            text = text.replace("{{date}}", datetime.now().strftime("%B %d, %Y"))
+            current_date = datetime.now().strftime("%B %d, %Y")
+            print(f"🔍 Replacing date with: {current_date}")
+            text = text.replace("{{date}}", current_date)
             paragraph.text = text
         elif "{{exhibit_a}}" in text:
+            print("🔍 Creating rates table...")
             # Create the rates table
             table = create_rates_table(doc, states, rates, method, wcfs_percentages)
             
@@ -279,17 +306,49 @@ def generate_contract(provider_id, method='standard', custom_rates=None, wcfs_pe
             
             # Add a small paragraph after the table for spacing
             doc.add_paragraph()
+            print("🔍 Rates table created and inserted")
+
+    print("🔍 Placeholder replacement completed")
 
     # Save the modified copy
     doc.save(docx_path)
+    print(f"🔍 Document saved to: {docx_path}")
 
-    # Convert to PDF using LibreOffice
+    # Convert to PDF using python-docx2txt and reportlab as fallback
+    pdf_path = docx_path.replace('.docx', '.pdf')
     try:
-        import subprocess
-        subprocess.run(['soffice', '--headless', '--convert-to', 'pdf', '--outdir', output_folder, docx_path], check=True)
-        pdf_path = os.path.join(output_folder, f"{filename}.pdf")
+        # Try method 1: docx2pdf (if available)
+        try:
+            from docx2pdf import convert
+            convert(docx_path, pdf_path)
+            print(f"✅ PDF generated using docx2pdf: {pdf_path}")
+        except (ImportError, Exception) as e:
+            print(f"🔍 docx2pdf failed: {e}")
+            # Method 2: Use win32com (Windows only)
+            try:
+                import win32com.client
+                word = win32com.client.Dispatch("Word.Application")
+                word.Visible = False
+                
+                # Open the document
+                doc_path = os.path.abspath(docx_path)
+                pdf_path_abs = os.path.abspath(pdf_path)
+                
+                document = word.Documents.Open(doc_path)
+                document.SaveAs(pdf_path_abs, FileFormat=17)  # 17 = PDF format
+                document.Close()
+                word.Quit()
+                
+                print(f"✅ PDF generated using Word COM: {pdf_path}")
+            except Exception as com_error:
+                print(f"🔍 Word COM failed: {com_error}")
+                # Method 3: Just return None for PDF
+                pdf_path = None
+                print(f"ℹ️  PDF generation failed, only DOCX available")
+                
     except Exception as e:
-        print(f"[WARN] PDF conversion failed: {e}")
+        print(f"🔍 [WARN] All PDF conversion methods failed: {e}")
+        pdf_path = None
 
     return docx_path, pdf_path
 
