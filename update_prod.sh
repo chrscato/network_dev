@@ -100,6 +100,22 @@ ssh $REMOTE_USER@$REMOTE_HOST << EOF
     # Clean up backup directories
     rm -rf database_backup attachments_backup contracts_backup
     
+    echo "🔒 Setting proper permissions..."
+    # Set ownership to www-data (the user running the Flask app)
+    chown -R www-data:www-data database attachments contracts
+    
+    # Set directory permissions to 755 (drwxr-xr-x)
+    find database attachments contracts -type d -exec chmod 755 {} \;
+    
+    # Set file permissions to 644 (rw-r--r--)
+    find database attachments contracts -type f -exec chmod 644 {} \;
+    
+    # Make sure the database file itself is writable
+    chmod 664 database/network_dev.db
+    
+    echo "🔄 Restarting service..."
+    systemctl restart network_dev
+    
     echo "✅ Update complete!"
 EOF
 
