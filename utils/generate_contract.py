@@ -6,7 +6,10 @@ import os
 import sys
 import uuid
 import shutil
+import subprocess
+import platform
 from docx.oxml import parse_xml
+from flask import current_app
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -188,7 +191,8 @@ def create_rates_table(doc, states, rates, method='standard', wcfs_percentages=N
             
     return table
 
-def generate_contract(provider_id, method='standard', custom_rates=None, wcfs_percentages=None):
+def generate_contract_docx(provider_id, method='standard', custom_rates=None, wcfs_percentages=None):
+    """Generate only the DOCX version of the contract."""
     provider = Provider.query.get(provider_id)
     if not provider:
         raise ValueError("Provider not found")
@@ -226,9 +230,8 @@ def generate_contract(provider_id, method='standard', custom_rates=None, wcfs_pe
     filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_')).strip()
     
     docx_path = os.path.join(output_folder, f"{filename}.docx")
-    pdf_path = os.path.join(output_folder, f"{filename}.pdf")
 
-    print(f"🔍 Output paths - DOCX: {docx_path}, PDF: {pdf_path}")
+    print(f"🔍 Output path - DOCX: {docx_path}")
 
     # Create a copy of the template for this contract
     shutil.copy2(template_path, docx_path)
@@ -314,23 +317,112 @@ def generate_contract(provider_id, method='standard', custom_rates=None, wcfs_pe
     doc.save(docx_path)
     print(f"🔍 Document saved to: {docx_path}")
 
-    # Convert to PDF using unoconv
-    pdf_path = docx_path.replace('.docx', '.pdf')
-    try:
-        # Use unoconv to convert DOCX to PDF
-        convert_cmd = f'unoconv -f pdf "{docx_path}"'
-        result = os.system(convert_cmd)
-        
-        if result == 0 and os.path.exists(pdf_path):
-            print(f"✅ PDF generated using unoconv: {pdf_path}")
-        else:
-            print(f"ℹ️ PDF generation failed, only DOCX available")
-            pdf_path = None
-                
-    except Exception as e:
-        print(f"🔍 [WARN] PDF conversion failed: {e}")
-        pdf_path = None
+    return docx_path
 
+def convert_docx_to_pdf(docx_path):
+    """Convert a DOCX file to PDF using LibreOffice."""
+    current_app.logger.info("\n🔍 Starting PDF conversion process...")
+    current_app.logger.info(f"🔍 Input DOCX path: {docx_path}")
+    
+    try:
+        # Debug environment
+        current_app.logger.info(f"🔍 Python executable: {sys.executable}")
+        current_app.logger.info(f"🔍 In virtual environment: {sys.prefix != sys.base_prefix}")
+        
+        # Verify input file exists and is readable
+        if not os.path.exists(docx_path):
+            current_app.logger.error(f"❌ Input DOCX file does not exist: {docx_path}")
+            return None
+            
+        if not os.access(docx_path, os.R_OK):
+            current_app.logger.error(f"❌ Input DOCX file is not readable: {docx_path}")
+            return None
+            
+        current_app.logger.info(f"✅ Input DOCX file verified")
+        
+        # Set up output path
+        pdf_path = docx_path.replace('.docx', '.pdf')
+        current_app.logger.info(f"🔍 Output PDF path will be: {pdf_path}")
+        
+        # Use absolute system path for LibreOffice
+        libreoffice_path = '/usr/bin/libreoffice'
+        
+        # Verify LibreOffice exists
+        if not os.path.exists(libreoffice_path):
+            current_app.logger.error(f"❌ LibreOffice not found at {libreoffice_path}")
+            return None
+        current_app.logger.info(f"✅ Found LibreOffice at: {libreoffice_path}")
+        
+        # Build the LibreOffice command
+        cmd = [
+            libreoffice_path,
+            '--headless',  # Run in headless mode
+            '--convert-to', 'pdf',  # Convert to PDF
+            '--outdir', os.path.dirname(pdf_path),  # Output directory
+            docx_path  # Input file
+        ]
+        
+        current_app.logger.info(f"🔍 Running command: {' '.join(cmd)}")
+        
+        # Run the conversion with system environment
+        env = os.environ.copy()
+        env['PATH'] = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+        
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=60,  # Increased timeout for larger documents
+            env=env
+        )
+        
+        # Log all output
+        if result.stdout:
+            current_app.logger.info(f"🔍 LibreOffice stdout:\n{result.stdout}")
+        if result.stderr:
+            current_app.logger.info(f"🔍 LibreOffice stderr:\n{result.stderr}")
+        
+        # Check the result
+        if result.returncode == 0:
+            current_app.logger.info(f"✅ LibreOffice process completed successfully")
+            
+            # Verify the output file
+            if os.path.exists(pdf_path):
+                file_size = os.path.getsize(pdf_path)
+                current_app.logger.info(f"✅ PDF file created successfully")
+                current_app.logger.info(f"🔍 PDF file size: {file_size} bytes")
+                
+                if file_size == 0:
+                    current_app.logger.error("❌ PDF file is empty (0 bytes)")
+                    return None
+                    
+                return pdf_path
+            else:
+                current_app.logger.error(f"❌ PDF file was not created at: {pdf_path}")
+                return None
+        else:
+            current_app.logger.error(f"❌ LibreOffice process failed with return code: {result.returncode}")
+            current_app.logger.error(f"❌ Error output: {result.stderr}")
+            return None
+            
+    except subprocess.TimeoutExpired:
+        current_app.logger.error("❌ PDF conversion timed out after 60 seconds")
+        return None
+    except Exception as e:
+        current_app.logger.error(f"❌ Unexpected error during PDF conversion: {str(e)}")
+        current_app.logger.error(f"❌ Error type: {type(e).__name__}")
+        import traceback
+        current_app.logger.error(f"❌ Full traceback:\n{traceback.format_exc()}")
+        return None
+
+def generate_contract(provider_id, method='standard', custom_rates=None, wcfs_percentages=None):
+    """Generate both DOCX and PDF versions of the contract."""
+    # First generate the DOCX
+    docx_path = generate_contract_docx(provider_id, method, custom_rates, wcfs_percentages)
+    
+    # Then try to convert to PDF
+    pdf_path = convert_docx_to_pdf(docx_path) if docx_path else None
+    
     return docx_path, pdf_path
 
 def generate_contract_per_state(provider_id, state_configurations):
@@ -368,13 +460,12 @@ def generate_contract_per_state(provider_id, state_configurations):
     filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_')).strip()
     
     docx_path = os.path.join(output_folder, f"{filename}.docx")
-    pdf_path = os.path.join(output_folder, f"{filename}.pdf")
 
     # Create a copy of the template
     shutil.copy2(template_path, docx_path)
     doc = Document(docx_path)
 
-    # Replace placeholders (same as before)
+    # Replace placeholders
     for paragraph in doc.paragraphs:
         text = paragraph.text
         if "{{provider_name}}" in text:
@@ -406,11 +497,7 @@ def generate_contract_per_state(provider_id, state_configurations):
     doc.save(docx_path)
 
     # Convert to PDF
-    try:
-        from docx2pdf import convert
-        convert(docx_path, pdf_path)
-    except Exception as e:
-        print(f"[WARN] PDF conversion failed: {e}")
+    pdf_path = convert_docx_to_pdf(docx_path) if docx_path else None
 
     return docx_path, pdf_path
 

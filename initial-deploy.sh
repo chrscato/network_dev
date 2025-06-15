@@ -59,15 +59,17 @@ echo -e "${YELLOW}🐍 Setting up Python environment...${NC}"
 ssh $REMOTE_USER@$REMOTE_HOST << EOF
   cd $REMOTE_DIR
   
-  # Install Python 3 and pip if not installed
-  apt update
-  apt install -y python3 python3-pip python3-venv git
+  # Update package lists
+  apt-get update
+  
+  # Install Python and required packages
+  apt-get install -y python3 python3-pip python3-venv git libreoffice
   
   # Create virtual environment
   echo "🔨 Creating virtual environment..."
   python3 -m venv venv
   
-  # Activate and install requirements
+  # Activate virtual environment and install requirements
   echo "📦 Installing Python packages..."
   source venv/bin/activate
   pip install --upgrade pip

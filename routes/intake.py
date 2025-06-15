@@ -149,15 +149,16 @@ def generate_contract_route(provider_id):
         docx_path, pdf_path = generate_contract_per_state(provider_id, state_configurations)
         
         # Update provider with contract file paths
-        if os.path.exists(docx_path):
+        if docx_path and os.path.exists(docx_path):
             provider.contract_docx = docx_path
             flash("Contract generated successfully! DOCX file available.")
-        
-        if os.path.exists(pdf_path):
-            provider.contract_pdf = pdf_path
-            flash("PDF version available.")
-        else:
-            flash("Note: PDF conversion failed. Only DOCX version is available.")
+            
+            # Try to convert to PDF
+            if pdf_path and os.path.exists(pdf_path):
+                provider.contract_pdf = pdf_path
+                flash("PDF version available.")
+            else:
+                flash("Note: PDF conversion failed. You can try converting again later.")
         
         db.session.commit()
         
@@ -230,3 +231,31 @@ def email_contract(provider_id):
         flash(f"Error emailing contract: {str(e)}", "error")
     
     return redirect(url_for("provider.list_providers"))
+
+@intake_bp.route("/<provider_id>/convert_to_pdf", methods=["POST"])
+@login_required
+def convert_to_pdf(provider_id):
+    """Convert existing DOCX contract to PDF."""
+    try:
+        provider = Provider.query.get_or_404(provider_id)
+        
+        if not provider.contract_docx or not os.path.exists(provider.contract_docx):
+            flash("DOCX contract not found", "error")
+            return redirect(url_for("provider.list_providers"))
+            
+        # Convert DOCX to PDF using docx2pdf
+        from utils.generate_contract import convert_docx_to_pdf
+        pdf_path = convert_docx_to_pdf(provider.contract_docx)
+        
+        if pdf_path and os.path.exists(pdf_path):
+            provider.contract_pdf = pdf_path
+            db.session.commit()
+            flash("PDF version generated successfully!", "success")
+        else:
+            flash("PDF conversion failed. Please ensure docx2pdf is installed.", "error")
+            
+        return redirect(url_for("provider.list_providers"))
+        
+    except Exception as e:
+        flash(f"Error converting to PDF: {e}", "error")
+        return redirect(url_for("provider.list_providers"))

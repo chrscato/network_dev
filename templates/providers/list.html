@@ -262,6 +262,10 @@
                 {% endif %}
                 {% if p.has_contract_pdf() %}
                 <a href="{{ url_for('intake.download_contract', provider_id=p.id, file_type='pdf') }}" class="action-link">Download PDF</a>
+                {% elif p.has_contract_docx() %}
+                <form method="POST" action="{{ url_for('intake.convert_to_pdf', provider_id=p.id) }}" style="display:inline;">
+                    <button type="submit" class="action-link" style="background-color: #FF9800;">Convert to PDF</button>
+                </form>
                 {% endif %}
             </div>
             {% endif %}
