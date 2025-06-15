@@ -15,12 +15,15 @@ check_status() {
     fi
 }
 
+# Activate virtual environment
+source venv/bin/activate
+
 # Pull latest changes
-git pull origin main
+git pull origin master
 check_status "Pulled latest changes"
 
-# Install dependencies
-npm install
+# Install/update dependencies
+pip install -r requirements.txt
 check_status "Dependencies installed"
 
 # Restart the application using PM2
