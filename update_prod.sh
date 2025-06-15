@@ -101,8 +101,8 @@ ssh $REMOTE_USER@$REMOTE_HOST << EOF
     rm -rf database_backup attachments_backup contracts_backup
     
     echo "🔒 Setting proper permissions..."
-    # Set ownership to www-data (the user running the Flask app)
-    chown -R www-data:www-data database attachments contracts
+    # Set ownership to root (since the service runs as root)
+    chown -R root:root database attachments contracts
     
     # Set directory permissions to 755 (drwxr-xr-x)
     find database attachments contracts -type d -exec chmod 755 {} \;
@@ -111,7 +111,7 @@ ssh $REMOTE_USER@$REMOTE_HOST << EOF
     find database attachments contracts -type f -exec chmod 644 {} \;
     
     # Make sure the database file itself is writable
-    chmod 664 database/network_dev.db
+    chmod 664 database/prov_portal.db
     
     echo "🔄 Restarting service..."
     systemctl restart network_dev
