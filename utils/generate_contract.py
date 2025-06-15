@@ -314,15 +314,15 @@ def generate_contract(provider_id, method='standard', custom_rates=None, wcfs_pe
     doc.save(docx_path)
     print(f"🔍 Document saved to: {docx_path}")
 
-    # Convert to PDF using LibreOffice in headless mode
+    # Convert to PDF using unoconv
     pdf_path = docx_path.replace('.docx', '.pdf')
     try:
-        # Use LibreOffice in headless mode to convert DOCX to PDF
-        convert_cmd = f'soffice --headless --convert-to pdf --outdir "{os.path.dirname(pdf_path)}" "{docx_path}"'
+        # Use unoconv to convert DOCX to PDF
+        convert_cmd = f'unoconv -f pdf "{docx_path}"'
         result = os.system(convert_cmd)
         
         if result == 0 and os.path.exists(pdf_path):
-            print(f"✅ PDF generated using LibreOffice: {pdf_path}")
+            print(f"✅ PDF generated using unoconv: {pdf_path}")
         else:
             print(f"ℹ️ PDF generation failed, only DOCX available")
             pdf_path = None
