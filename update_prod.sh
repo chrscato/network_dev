@@ -76,19 +76,29 @@ ssh $REMOTE_USER@$REMOTE_HOST << EOF
     cd $REMOTE_DIR
     
     echo "💾 Backing up important files..."
-    cp -r database/ database_backup/
-    cp -r attachments/ attachments_backup/
-    cp -r contracts/ contracts_backup/
+    # Create backup directories if they don't exist
+    mkdir -p database_backup attachments_backup contracts_backup
+    
+    # Only copy if directories exist
+    [ -d "database" ] && cp -r database/* database_backup/ 2>/dev/null || true
+    [ -d "attachments" ] && cp -r attachments/* attachments_backup/ 2>/dev/null || true
+    [ -d "contracts" ] && cp -r contracts/* contracts_backup/ 2>/dev/null || true
     
     echo "📥 Pulling latest code..."
     git fetch origin
     git reset --hard origin/master
     
     echo "📦 Restoring important files..."
-    rm -rf database/ attachments/ contracts/
-    mv database_backup/ database/
-    mv attachments_backup/ attachments/
-    mv contracts_backup/ contracts/
+    # Create directories if they don't exist
+    mkdir -p database attachments contracts
+    
+    # Only restore if backup directories have content
+    [ "$(ls -A database_backup)" ] && cp -r database_backup/* database/ 2>/dev/null || true
+    [ "$(ls -A attachments_backup)" ] && cp -r attachments_backup/* attachments/ 2>/dev/null || true
+    [ "$(ls -A contracts_backup)" ] && cp -r contracts_backup/* contracts/ 2>/dev/null || true
+    
+    # Clean up backup directories
+    rm -rf database_backup attachments_backup contracts_backup
     
     echo "✅ Update complete!"
 EOF
