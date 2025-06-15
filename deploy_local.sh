@@ -31,7 +31,7 @@ else
 fi
 
 # Push changes to remote repository
-git push origin main
+git push origin master
 check_status "Changes pushed to repository"
 
 # SSH into the VM and run the update script
