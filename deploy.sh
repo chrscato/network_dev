@@ -82,10 +82,23 @@ ssh $REMOTE_USER@$REMOTE_HOST << EOF
     
     echo "📥 Pulling latest code..."
     git fetch origin
-    # Reset everything except database and attachments
+    
+    # First, backup the database and other important files
+    echo "💾 Backing up database and important files..."
+    cp -r database/ database_backup/
+    cp -r attachments/ attachments_backup/
+    cp -r contracts/ contracts_backup/
+    
+    # Reset to latest code
+    echo "🔄 Resetting to latest code..."
     git reset --hard origin/master
-    git checkout origin/master -- .
-    git reset -- database/ attachments/ contracts/
+    
+    # Restore the backed up files
+    echo "📦 Restoring database and important files..."
+    rm -rf database/ attachments/ contracts/
+    mv database_backup/ database/
+    mv attachments_backup/ attachments/
+    mv contracts_backup/ contracts/
     
     echo "🐍 Updating Python environment..."
     source venv/bin/activate

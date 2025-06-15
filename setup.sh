@@ -11,4 +11,5 @@ ssh root@159.223.104.254 "cd /opt/network_dev && \
     flask db init && \
     flask db migrate && \
     flask db upgrade && \
+    chown -R network_dev:network_dev /opt/network_dev && \
     systemctl restart network_dev.service" 

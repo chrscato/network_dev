@@ -314,40 +314,21 @@ def generate_contract(provider_id, method='standard', custom_rates=None, wcfs_pe
     doc.save(docx_path)
     print(f"🔍 Document saved to: {docx_path}")
 
-    # Convert to PDF using python-docx2txt and reportlab as fallback
+    # Convert to PDF using LibreOffice in headless mode
     pdf_path = docx_path.replace('.docx', '.pdf')
     try:
-        # Try method 1: docx2pdf (if available)
-        try:
-            from docx2pdf import convert
-            convert(docx_path, pdf_path)
-            print(f"✅ PDF generated using docx2pdf: {pdf_path}")
-        except (ImportError, Exception) as e:
-            print(f"🔍 docx2pdf failed: {e}")
-            # Method 2: Use win32com (Windows only)
-            try:
-                import win32com.client
-                word = win32com.client.Dispatch("Word.Application")
-                word.Visible = False
-                
-                # Open the document
-                doc_path = os.path.abspath(docx_path)
-                pdf_path_abs = os.path.abspath(pdf_path)
-                
-                document = word.Documents.Open(doc_path)
-                document.SaveAs(pdf_path_abs, FileFormat=17)  # 17 = PDF format
-                document.Close()
-                word.Quit()
-                
-                print(f"✅ PDF generated using Word COM: {pdf_path}")
-            except Exception as com_error:
-                print(f"🔍 Word COM failed: {com_error}")
-                # Method 3: Just return None for PDF
-                pdf_path = None
-                print(f"ℹ️  PDF generation failed, only DOCX available")
+        # Use LibreOffice in headless mode to convert DOCX to PDF
+        convert_cmd = f'soffice --headless --convert-to pdf --outdir "{os.path.dirname(pdf_path)}" "{docx_path}"'
+        result = os.system(convert_cmd)
+        
+        if result == 0 and os.path.exists(pdf_path):
+            print(f"✅ PDF generated using LibreOffice: {pdf_path}")
+        else:
+            print(f"ℹ️ PDF generation failed, only DOCX available")
+            pdf_path = None
                 
     except Exception as e:
-        print(f"🔍 [WARN] All PDF conversion methods failed: {e}")
+        print(f"🔍 [WARN] PDF conversion failed: {e}")
         pdf_path = None
 
     return docx_path, pdf_path
