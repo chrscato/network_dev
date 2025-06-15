@@ -8,7 +8,7 @@ import uuid
 import os
 import json
 from datetime import datetime
-from utils.generate_contract import generate_contract
+from utils.generate_contract import generate_contract, generate_contract_per_state, IMAGING_CATEGORIES
 from utils.mailers.contract_mailer import send_contract_email, send_contract_notification
 
 intake_bp = Blueprint("intake", __name__, url_prefix="/intakes")
@@ -84,78 +84,85 @@ def api_intakes():
     intakes = Intake.query.all()
     return jsonify([intake.to_dict() for intake in intakes])
 
-# Contract-related routes
+@intake_bp.route("/<provider_id>/configure_contract", methods=["GET"])
+@login_required
+def configure_contract(provider_id):
+    """Configure contract rates for a provider."""
+    provider = Provider.query.get_or_404(provider_id)
+    
+    # Parse states from provider
+    if provider.states_in_contract:
+        states = [s.strip() for s in provider.states_in_contract.split(",") if s.strip()]
+    else:
+        states = ["CA"]  # Default to California
+    
+    return render_template(
+        "providers/configure_contract.html", 
+        provider=provider, 
+        states=states,
+        imaging_categories=IMAGING_CATEGORIES
+    )
+
 @intake_bp.route("/<provider_id>/generate_contract", methods=["POST"])
 @login_required
 def generate_contract_route(provider_id):
     """Generate a contract for a provider."""
     try:
-        provider = Provider.query.get(provider_id)
-        if not provider:
-            flash("Provider not found", "error")
-            return redirect(url_for("provider.list_providers"))
-
-        rate_type = request.form.get('rate_type', 'standard')
+        provider = Provider.query.get_or_404(provider_id)
         
-        # Initialize variables
-        custom_rates = None
-        wcfs_percentages = None
-
-        if rate_type == 'custom':
-            custom_rates = {
-                'mri_without': float(request.form['mri_without_rate']),
-                'mri_with': float(request.form['mri_with_rate']),
-                'mri_both': float(request.form['mri_both_rate']),
-                'ct_without': float(request.form['ct_without_rate']),
-                'ct_with': float(request.form['ct_with_rate']),
-                'ct_both': float(request.form['ct_both_rate']),
-                'xray': float(request.form['xray_rate']),
-                'arthrogram': float(request.form['arthrogram_rate'])
-            }
-        elif rate_type == 'wcfs':
-            wcfs_percentages = {
-                'mri_without': float(request.form['mri_without_wcfs']),
-                'mri_with': float(request.form['mri_with_wcfs']),
-                'mri_both': float(request.form['mri_both_wcfs']),
-                'ct_without': float(request.form['ct_without_wcfs']),
-                'ct_with': float(request.form['ct_with_wcfs']),
-                'ct_both': float(request.form['ct_both_wcfs']),
-                'xray': float(request.form['xray_wcfs']),
-                'arthrogram': float(request.form['arthrogram_wcfs'])
-            }
-
-        filename = f"{provider.dba_name or provider.name}_Agreement"
-        filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_')).strip()
-        
-        docx_path, pdf_path = generate_contract(
-            provider_id,
-            method=rate_type,
-            wcfs_percentages=wcfs_percentages,
-            custom_rates=custom_rates
-        )
-        
-        if os.path.exists(docx_path):
-            flash("Contract generated successfully!", "success")
-            provider.contract_docx = docx_path
+        # Parse states
+        if provider.states_in_contract:
+            states = [s.strip() for s in provider.states_in_contract.split(",") if s.strip()]
         else:
-            flash("Error: DOCX file was not generated.", "error")
+            states = ["CA"]
+        
+        # Process per-state rate configurations
+        state_configurations = {}
+        
+        for state in states:
+            rate_type = request.form.get(f'rate_type_{state}', 'standard')
+            state_config = {'method': rate_type}
             
+            if rate_type == 'wcfs':
+                # Collect WCFS percentages for this state
+                wcfs_data = {}
+                for category in IMAGING_CATEGORIES:
+                    field_name = f"wcfs_{state}_{category.replace(' ', '_').replace('&', 'and').lower()}"
+                    percentage = request.form.get(field_name)
+                    if percentage:
+                        wcfs_data[category] = float(percentage)
+                state_config['wcfs_percentages'] = wcfs_data
+                
+            elif rate_type == 'custom':
+                # Collect custom rates for this state
+                custom_data = {}
+                for category in IMAGING_CATEGORIES:
+                    field_name = f"custom_{state}_{category.replace(' ', '_').replace('&', 'and').lower()}"
+                    rate = request.form.get(field_name)
+                    if rate:
+                        custom_data[category] = float(rate)
+                state_config['custom_rates'] = custom_data
+            
+            state_configurations[state] = state_config
+        
+        # Generate contract with per-state configuration
+        docx_path, pdf_path = generate_contract_per_state(provider_id, state_configurations)
+        
+        # Update provider with contract file paths
+        if os.path.exists(docx_path):
+            provider.contract_docx = docx_path
+            flash("Contract generated successfully! DOCX file available.")
+        
         if os.path.exists(pdf_path):
-            flash("PDF version available.", "success")
             provider.contract_pdf = pdf_path
+            flash("PDF version available.")
         else:
-            flash("Note: PDF conversion failed. Only DOCX version is available.", "warning")
+            flash("Note: PDF conversion failed. Only DOCX version is available.")
         
         db.session.commit()
         
-        try:
-            send_contract_notification(provider, docx_path, pdf_path)
-            flash("Notification email sent to admin.", "success")
-        except Exception as e:
-            flash(f"Note: Could not send notification email: {str(e)}", "warning")
-            
     except Exception as e:
-        flash(f"Error generating contract: {e}", "error")
+        flash(f"Error generating contract: {e}")
     
     return redirect(url_for("provider.list_providers"))
 

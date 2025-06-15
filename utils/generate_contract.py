@@ -352,6 +352,153 @@ def generate_contract(provider_id, method='standard', custom_rates=None, wcfs_pe
 
     return docx_path, pdf_path
 
+def generate_contract_per_state(provider_id, state_configurations):
+    """
+    Generate contract with different rate configurations per state.
+    
+    Args:
+        provider_id: The ID of the provider
+        state_configurations: Dict with state as key and config dict as value
+                              e.g., {'CA': {'method': 'wcfs', 'wcfs_percentages': {...}}}
+    
+    Returns:
+        Tuple of (docx_path, pdf_path)
+    """
+    provider = Provider.query.get(provider_id)
+    if not provider:
+        raise ValueError("Provider not found")
+
+    # Parse states
+    if provider.states_in_contract:
+        states = [s.strip() for s in provider.states_in_contract.split(",") if s.strip()]
+    else:
+        states = ["CA"]
+
+    # Load template
+    template_path = "templates/contracts/IMAGING_TEMPLATE.docx"
+    if not os.path.exists(template_path):
+        raise FileNotFoundError(f"Template not found at {template_path}")
+
+    # Create output paths
+    output_folder = "contracts"
+    os.makedirs(output_folder, exist_ok=True)
+    
+    filename = f"{provider.dba_name or provider.name}_Agreement"
+    filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_')).strip()
+    
+    docx_path = os.path.join(output_folder, f"{filename}.docx")
+    pdf_path = os.path.join(output_folder, f"{filename}.pdf")
+
+    # Create a copy of the template
+    shutil.copy2(template_path, docx_path)
+    doc = Document(docx_path)
+
+    # Replace placeholders (same as before)
+    for paragraph in doc.paragraphs:
+        text = paragraph.text
+        if "{{provider_name}}" in text:
+            paragraph.text = text.replace("{{provider_name}}", provider.name or "")
+        elif "{{dba_name}}" in text:
+            paragraph.text = text.replace("{{dba_name}}", provider.dba_name or "")
+        elif "{{address}}" in text:
+            paragraph.text = text.replace("{{address}}", provider.address or "")
+        elif "{{provider_type}}" in text:
+            paragraph.text = text.replace("{{provider_type}}", provider.provider_type or "")
+        elif "{{npi}}" in text:
+            paragraph.text = text.replace("{{npi}}", provider.npi or "")
+        elif "{{specialty}}" in text:
+            paragraph.text = text.replace("{{specialty}}", provider.specialty or "")
+        elif "{{states}}" in text:
+            paragraph.text = text.replace("{{states}}", ", ".join(states))
+        elif "{{date}}" in text:
+            paragraph.text = text.replace("{{date}}", datetime.now().strftime("%B %d, %Y"))
+        elif "{{exhibit_a}}" in text:
+            # Create the per-state rates table
+            table = create_per_state_rates_table(doc, states, state_configurations)
+            
+            # Insert the table
+            p = paragraph._element
+            p.getparent().insert(p.getparent().index(p) + 1, table._element)
+            p.getparent().remove(p)
+            doc.add_paragraph()
+
+    doc.save(docx_path)
+
+    # Convert to PDF
+    try:
+        from docx2pdf import convert
+        convert(docx_path, pdf_path)
+    except Exception as e:
+        print(f"[WARN] PDF conversion failed: {e}")
+
+    return docx_path, pdf_path
+
+def create_per_state_rates_table(doc, states, state_configurations):
+    """Create a rates table that shows different rate types per state."""
+    from docx.oxml import parse_xml
+    
+    table = doc.add_table(rows=1, cols=3)
+    
+    # Add borders to table
+    for row in table.rows:
+        for cell in row.cells:
+            tc = cell._tc
+            tcPr = tc.get_or_add_tcPr()
+            for key in ['top', 'left', 'bottom', 'right']:
+                element = parse_xml(f'<w:tcBorders xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:{key} w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:tcBorders>')
+                tcPr.append(element)
+
+    # Header
+    hdr_cells = table.rows[0].cells
+    hdr_cells[0].text = "State"
+    hdr_cells[1].text = "Procedure"
+    hdr_cells[2].text = "Rate/Percentage"
+
+    for state in states:
+        config = state_configurations.get(state, {'method': 'standard'})
+        method = config['method']
+        
+        # Get rates for this state based on its configuration
+        if method == 'standard':
+            # Get standard rates for this state
+            state_rates = {}
+            for category in IMAGING_CATEGORIES:
+                standard_rate = StandardRates.query.filter_by(
+                    state=state, category=category
+                ).first()
+                if standard_rate:
+                    state_rates[category] = standard_rate.rate
+                else:
+                    state_rates[category] = IMAGING_RATES.get(category, 0)
+        
+        elif method == 'wcfs':
+            state_rates = config.get('wcfs_percentages', {})
+        
+        elif method == 'custom':
+            state_rates = config.get('custom_rates', {})
+        
+        for category in IMAGING_CATEGORIES:
+            row_cells = table.add_row().cells
+            
+            # Add borders to new cells
+            for cell in row_cells:
+                tc = cell._tc
+                tcPr = tc.get_or_add_tcPr()
+                for key in ['top', 'left', 'bottom', 'right']:
+                    element = parse_xml(f'<w:tcBorders xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:{key} w:val="single" w:sz="4" w:space="0" w:color="auto"/></w:tcBorders>')
+                    tcPr.append(element)
+            
+            row_cells[0].text = state
+            row_cells[1].text = category
+            
+            rate_value = state_rates.get(category, 0)
+            if method == 'wcfs':
+                row_cells[2].text = f"{rate_value}% of WCFS"
+            else:
+                row_cells[2].text = f"${rate_value:.2f}"
+    
+    return table
+
 # Test section - can be run directly
 if __name__ == "__main__":
     with app.app_context():

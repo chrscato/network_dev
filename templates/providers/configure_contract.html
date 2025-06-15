@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Configure Contract - {{ provider.name }}{% endblock %}
+
+{% block heading %}Configure Contract Rates - {{ provider.name }}{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .provider-info {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+    }
+    .state-section {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: #fafafa;
+    }
+    .state-header {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    .rate-type-selector {
+        margin-bottom: 15px;
+    }
+    .rate-type-selector select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .rate-inputs {
+        display: none;
+        margin-top: 15px;
+    }
+    .rate-inputs.active {
+        display: block;
+    }
+    .rate-input-row {
+        display: flex;
+        margin-bottom: 10px;
+        align-items: center;
+    }
+    .rate-input-row label {
+        flex: 1;
+        margin-right: 10px;
+        font-weight: normal;
+    }
+    .rate-input-row input {
+        flex: 0 0 120px;
+        padding: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .imaging-categories {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .submit-section {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #ddd;
+        text-align: center;
+    }
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        margin: 0 10px;
+    }
+    .btn-primary {
+        background-color: #4CAF50;
+        color: white;
+    }
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+    .btn:hover {
+        opacity: 0.9;
+    }
+    .standard-info {
+        color: #666;
+        font-style: italic;
+        margin-top: 10px;
+    }
+    .apply-all-section {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        align-items: center;
+    }
+    
+    .apply-all-section input {
+        width: 100px;
+        padding: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .apply-all-section button {
+        padding: 5px 10px;
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    
+    .apply-all-section button:hover {
+        background-color: #5a6268;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="provider-info">
+    <h2>Provider Information</h2>
+    <p><strong>Name:</strong> {{ provider.name }}</p>
+    {% if provider.dba_name %}
+    <p><strong>DBA Name:</strong> {{ provider.dba_name }}</p>
+    {% endif %}
+    <p><strong>States:</strong> {{ provider.states_in_contract or 'CA' }}</p>
+</div>
+
+<form method="POST" action="{{ url_for('intake.generate_contract_route', provider_id=provider.id) }}">
+    {% for state in states %}
+    <div class="state-section">
+        <div class="state-header">{{ state }} Rates</div>
+        
+        <div class="rate-type-selector">
+            <label for="rate_type_{{ state }}">Rate Type for {{ state }}:</label>
+            <select name="rate_type_{{ state }}" id="rate_type_{{ state }}" onchange="toggleRateInputs('{{ state }}')" required>
+                <option value="standard">Standard Rates</option>
+                <option value="wcfs">WCFS Percentages</option>
+                <option value="custom">Custom Dollar Amounts</option>
+            </select>
+        </div>
+
+        <!-- Standard Rates Section -->
+        <div id="standard_{{ state }}" class="rate-inputs active">
+            <div class="standard-info">
+                Using standard rates from database for {{ state }}.
+            </div>
+        </div>
+
+        <!-- WCFS Percentages Section -->
+        <div id="wcfs_{{ state }}" class="rate-inputs">
+            <div class="apply-all-section">
+                <input type="number" step="1" min="0" max="100" id="apply_all_wcfs_{{ state }}" placeholder="Enter percentage">
+                <button type="button" onclick="applyAllWCFS('{{ state }}')" class="btn btn-secondary">Apply to All Procedures</button>
+            </div>
+            <div class="imaging-categories">
+                {% for category in imaging_categories %}
+                <div class="rate-input-row">
+                    <label for="wcfs_{{ state }}_{{ loop.index0 }}">{{ category }} WCFS %:</label>
+                    <input type="number" step="1" min="0" max="100" 
+                           id="wcfs_{{ state }}_{{ loop.index0 }}" 
+                           name="wcfs_{{ state }}_{{ category.replace(' ', '_').replace('&', 'and').lower() }}" 
+                           placeholder="%">
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Custom Dollar Amounts Section -->
+        <div id="custom_{{ state }}" class="rate-inputs">
+            <div class="imaging-categories">
+                {% for category in imaging_categories %}
+                <div class="rate-input-row">
+                    <label for="custom_{{ state }}_{{ loop.index0 }}">{{ category }} Rate ($):</label>
+                    <input type="number" step="0.01" min="0" 
+                           id="custom_{{ state }}_{{ loop.index0 }}" 
+                           name="custom_{{ state }}_{{ category.replace(' ', '_').replace('&', 'and').lower() }}" 
+                           placeholder="$">
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="submit-section">
+        <button type="submit" class="btn btn-primary">Generate Contract</button>
+        <a href="{{ url_for('provider.list_providers') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+
+<script>
+function toggleRateInputs(state) {
+    const rateType = document.getElementById('rate_type_' + state).value;
+    const standardSection = document.getElementById('standard_' + state);
+    const wcfsSection = document.getElementById('wcfs_' + state);
+    const customSection = document.getElementById('custom_' + state);
+
+    // Hide all sections
+    standardSection.classList.remove('active');
+    wcfsSection.classList.remove('active');
+    customSection.classList.remove('active');
+
+    // Show the selected section
+    if (rateType === 'standard') {
+        standardSection.classList.add('active');
+    } else if (rateType === 'wcfs') {
+        wcfsSection.classList.add('active');
+    } else if (rateType === 'custom') {
+        customSection.classList.add('active');
+    }
+}
+
+function applyAllWCFS(state) {
+    const percentage = document.getElementById('apply_all_wcfs_' + state).value;
+    if (!percentage) {
+        alert('Please enter a percentage value');
+        return;
+    }
+    
+    const inputs = document.querySelectorAll(`input[name^="wcfs_${state}_"]`);
+    inputs.forEach(input => {
+        input.value = percentage;
+    });
+}
+</script>
+{% endblock %} 

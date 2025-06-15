@@ -82,7 +82,10 @@ ssh $REMOTE_USER@$REMOTE_HOST << EOF
     
     echo "📥 Pulling latest code..."
     git fetch origin
+    # Reset everything except database and attachments
     git reset --hard origin/master
+    git checkout origin/master -- .
+    git reset -- database/ attachments/ contracts/
     
     echo "🐍 Updating Python environment..."
     source venv/bin/activate
